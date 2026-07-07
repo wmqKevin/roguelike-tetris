@@ -55,13 +55,37 @@ describe('GameState', () => {
     expect(state.rewardOptions.length).toBeGreaterThan(0);
   });
 
-  it('uses the v0.2 first-stage target and progress copy', () => {
+  it('uses the v0.3 first-stage safety net and progress copy', () => {
     const state = new GameState('stage-one');
     expect(state.currentStage().lineTarget).toBe(4);
-    expect(state.linesUntilReward()).toBe(4);
-    state.linesInStage = 3;
+    expect(state.linesUntilReward()).toBe(2);
+    expect(state.energyUntilReward()).toBe(120);
+    expect(state.piecesUntilReward()).toBe(12);
+    state.linesInStage = 1;
     expect(state.linesUntilReward()).toBe(1);
     expect(state.gameOverProgressText()).toBe('差 1 行进入 Stage 2');
+  });
+
+  it('opens the first reward after two stage-one lines', () => {
+    const state = new GameState('first-lines');
+    state.linesInStage = 2;
+    (state as unknown as { checkStageComplete(): void }).checkStageComplete();
+    expect(state.phase).toBe('reward');
+    expect(state.rewardOptions.map((upgrade) => upgrade.id)).toEqual(['precision_hard_drop', 'stable_preview', 'line_clearer']);
+  });
+
+  it('opens the first reward at 120 energy', () => {
+    const state = new GameState('first-energy');
+    state.energy = 120;
+    (state as unknown as { checkStageComplete(): void }).checkStageComplete();
+    expect(state.phase).toBe('reward');
+  });
+
+  it('opens the first reward after twelve locked pieces', () => {
+    const state = new GameState('first-locks');
+    state.piecesLocked = 12;
+    (state as unknown as { checkStageComplete(): void }).checkStageComplete();
+    expect(state.phase).toBe('reward');
   });
 
   it('tracks highest stage reached after a reward selection', () => {
@@ -71,6 +95,9 @@ describe('GameState', () => {
     expect(state.phase).toBe('reward');
     state.selectReward(0);
     expect(state.highestStageReached).toBe(2);
+    expect(state.linesUntilReward()).toBe(8);
+    expect(state.energyUntilReward()).toBe(BALANCE.energyMax);
+    expect(state.piecesUntilReward()).toBe(Number.POSITIVE_INFINITY);
   });
 
   it('consumes full energy after an energy-triggered reward selection', () => {
