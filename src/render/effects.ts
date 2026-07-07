@@ -40,6 +40,22 @@ export class Effects {
     });
   }
 
+  floatingText(message: string, x: number, y: number, color = '#ffde59'): void {
+    const label = this.scene.add.text(x, y, message, {
+      fontFamily: 'Inter, Arial, sans-serif',
+      fontSize: '22px',
+      color,
+      fontStyle: '700'
+    }).setOrigin(0.5);
+    this.scene.tweens.add({
+      targets: label,
+      y: y - 42,
+      alpha: 0,
+      duration: this.reducedMotion ? 420 : 760,
+      onComplete: () => label.destroy()
+    });
+  }
+
   private flash(tint: number, alpha: number, duration: number): void {
     const flash = this.scene.add.rectangle(this.scene.scale.width / 2, this.scene.scale.height / 2, this.scene.scale.width, this.scene.scale.height, tint, alpha);
     this.scene.tweens.add({ targets: flash, alpha: 0, duration: this.reducedMotion ? Math.min(90, duration) : duration, onComplete: () => flash.destroy() });
