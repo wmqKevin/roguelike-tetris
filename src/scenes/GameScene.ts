@@ -30,7 +30,7 @@ export class GameScene extends Phaser.Scene {
     this.saveData = loadSave();
     this.state = new GameState('mvp-seed');
     this.boardRenderer = new BoardRenderer(this);
-    this.hudRenderer = new HudRenderer(this, this.boardRenderer, (index) => this.pick(index));
+    this.hudRenderer = new HudRenderer(this, this.boardRenderer, (index) => this.pick(index), () => this.restart());
     this.effects = new Effects(this, this.saveData.settings.reducedMotion);
     this.inputManager = new InputManager(this, (command) => this.handleCommand(command));
     this.inputManager.create();
@@ -78,8 +78,8 @@ export class GameScene extends Phaser.Scene {
     this.state.selectReward(index);
     this.audio.playSfx('reward');
     this.effects.rewardBurst();
-    this.highlightUntilMs = this.time.now + 1000;
-    this.toast = { message: `${upgrade.name}已生效：${upgrade.description.replace(/。$/, '')}`, untilMs: this.time.now + 1000 };
+    this.highlightUntilMs = this.time.now + 1500;
+    this.toast = { message: `${upgrade.name}已生效：${upgrade.description.replace(/。$/, '')}`, untilMs: this.time.now + 1500 };
   }
 
   private consumeEvents(): void {
