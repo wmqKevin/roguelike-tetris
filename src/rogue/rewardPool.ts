@@ -1,6 +1,8 @@
 import type { Rng } from '../core/rng';
 import { UPGRADES, type UpgradeConfig } from '../data/upgrades';
 
+export const FIRST_REWARD_UPGRADE_IDS = ['precision_hard_drop', 'stable_preview', 'line_clearer'];
+
 const WEIGHTS = {
   common: 60,
   rare: 30,
@@ -24,4 +26,11 @@ export function createRewardOptions(rng: Rng, owned: string[], count = 3): Upgra
     }
   }
   return options;
+}
+
+export function createFirstRewardOptions(owned: string[]): UpgradeConfig[] {
+  return FIRST_REWARD_UPGRADE_IDS
+    .filter((id) => !owned.includes(id))
+    .map((id) => UPGRADES.find((upgrade) => upgrade.id === id))
+    .filter((upgrade): upgrade is UpgradeConfig => Boolean(upgrade));
 }
