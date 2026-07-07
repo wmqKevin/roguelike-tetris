@@ -44,7 +44,7 @@ export class GameScene extends Phaser.Scene {
     this.inputManager.update(delta);
     this.state.step(delta);
     this.consumeEvents();
-    const layout = createLayout(this.scale.width, this.scale.height);
+    const layout = createLayout(this.scale.width, this.scale.height, this.displayWidth());
     this.boardRenderer.render(this.state.board, this.state.active, this.ghostPiece(), layout);
     this.hudRenderer.render(this.state, layout, Math.max(this.saveData.highScore, this.state.score), {
       nowMs: this.time.now,
@@ -79,7 +79,7 @@ export class GameScene extends Phaser.Scene {
     this.audio.playSfx('reward');
     this.effects.rewardBurst();
     this.highlightUntilMs = this.time.now + 1500;
-    this.toast = { message: `${upgrade.name}已生效：${upgrade.description.replace(/。$/, '')}`, untilMs: this.time.now + 1500 };
+    this.toast = { message: `${upgrade.name}已生效：${upgrade.description.replace(/。$/, '')}`, untilMs: this.time.now + 1800 };
   }
 
   private consumeEvents(): void {
@@ -91,6 +91,12 @@ export class GameScene extends Phaser.Scene {
       if (event.type === 'stageStart') {
         this.audio.playSfx('stage_start');
         this.effects.stageStart();
+      }
+      if (event.type === 'upgradeFeedback') {
+        const layout = createLayout(this.scale.width, this.scale.height, this.displayWidth());
+        this.effects.floatingText(event.message, layout.boardX + layout.cell * 5, layout.boardY + layout.cell * 5);
+        this.toast = { message: `${event.message}｜${event.goal}`, untilMs: this.time.now + 2200 };
+        this.highlightUntilMs = this.time.now + 2200;
       }
       if (event.type === 'special' || event.type === 'skill') {
         this.audio.playSfx('special');
@@ -120,7 +126,7 @@ export class GameScene extends Phaser.Scene {
 
   private hardDropImpactPoint(): { x: number; y: number; radius: number } {
     const ghost = this.ghostPiece();
-    const layout = createLayout(this.scale.width, this.scale.height);
+    const layout = createLayout(this.scale.width, this.scale.height, this.displayWidth());
     return {
       x: layout.boardX + (ghost.x + 2) * layout.cell,
       y: layout.boardY + Math.max(0, ghost.y) * layout.cell,
@@ -133,5 +139,10 @@ export class GameScene extends Phaser.Scene {
     if (command === 'RotateCW' || command === 'RotateCCW') this.usedTutorialActions.add('rotate');
     if (command === 'HardDrop') this.usedTutorialActions.add('hardDrop');
     if (command === 'Hold') this.usedTutorialActions.add('hold');
+  }
+
+  private displayWidth(): number {
+    const canvasWidth = this.sys.game.canvas?.getBoundingClientRect().width;
+    return canvasWidth && canvasWidth > 0 ? canvasWidth : this.scale.displaySize.width || window.innerWidth || this.scale.width;
   }
 }
