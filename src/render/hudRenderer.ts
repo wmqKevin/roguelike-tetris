@@ -21,7 +21,8 @@ export class HudRenderer {
   constructor(
     private readonly scene: Phaser.Scene,
     private readonly boardRenderer: BoardRenderer,
-    private readonly onRewardPick: (index: number) => void
+    private readonly onRewardPick: (index: number) => void,
+    private readonly onRestart: () => void
   ) {}
 
   render(state: GameState, layout: Layout, highScore: number, ui: HudUiState): void {
@@ -44,7 +45,7 @@ export class HudRenderer {
     this.stat(x, y, 'BEST', highScore.toString()); y += 52;
     this.stat(x, y, 'STAGE', `${state.stageIndex + 1} / 8`); y += 52;
     const highlight = ui.nowMs < ui.highlightUntilMs;
-    this.stat(x, y, 'LINES', `${state.linesInStage} / ${state.currentStage().lineTarget}`, highlight ? '#ffde59' : '#ffffff'); y += 52;
+    this.stat(x, y, 'LINES', `${state.linesInStage} / ${state.linesUntilReward() + state.linesInStage}`, highlight ? '#ffde59' : '#ffffff'); y += 52;
     this.stat(x, y, 'ENERGY', `${Math.floor(state.energy)} / 200`, highlight || 200 - state.energy <= 20 ? '#ffde59' : '#ffffff');
     this.energyBar(x, y + 36, state.energy / 200, ui.nowMs);
 
@@ -84,11 +85,15 @@ export class HudRenderer {
 
   private stageObjective(state: GameState, layout: Layout, nowMs: number): void {
     const remaining = state.linesUntilReward();
+    const energy = state.energyUntilReward();
+    const pieces = state.piecesUntilReward();
     const urgentLines = remaining > 0 && remaining <= 2;
-    const urgentEnergy = 200 - state.energy <= 20;
+    const urgentEnergy = energy > 0 && energy <= 20;
     const pulseOn = Math.floor(nowMs / 180) % 2 === 0;
-    const color = (urgentLines || urgentEnergy) && pulseOn ? '#ffde59' : '#d7f7ff';
-    const goal = remaining > 0 ? `目标：再消除 ${remaining} 行获得强化` : '目标：选择强化继续推进';
+    const color = (urgentLines || urgentEnergy || pieces <= 2) && pulseOn ? '#ffde59' : '#d7f7ff';
+    const parts = [`再消除 ${remaining} 行`, `攒满能量 ${Math.ceil(energy)}`];
+    if (Number.isFinite(pieces)) parts.push(`落 ${pieces} 块`);
+    const goal = remaining > 0 || energy > 0 || pieces > 0 ? `目标：${parts.join(' / ')} 即可选择强化` : '目标：选择强化继续推进';
     this.text(layout.boardX, layout.boardY - 44, goal, 20, color);
   }
 
@@ -124,7 +129,14 @@ export class HudRenderer {
     this.text(width / 2 - 210, height / 2 - 18, state.gameOverProgressText(), 18, '#ffde59');
     const upgrades = state.ownedUpgrades.length > 0 ? state.ownedUpgrades.map((upgrade) => upgrade.name).join(' / ') : '无';
     this.text(width / 2 - 210, height / 2 + 18, `本局强化：${upgrades}`, 16, '#d7f7ff').setWordWrapWidth(420);
-    this.text(width / 2 - 210, height / 2 + 106, 'Space 再来一局', 20, '#9befff');
+    const button = this.scene.add.text(width / 2 - 210, height / 2 + 96, '再来一局', { fontFamily: 'Inter, Arial, sans-serif', fontSize: '20px', color: '#08101f', backgroundColor: '#9befff' })
+      .setPadding(18, 10, 18, 10)
+      .setInteractive({ useHandCursor: true });
+    button.on('pointerover', () => button.setStyle({ backgroundColor: '#ffde59' }));
+    button.on('pointerout', () => button.setStyle({ backgroundColor: '#9befff' }));
+    button.on('pointerdown', () => this.onRestart());
+    this.texts.push(button);
+    this.text(width / 2 - 58, height / 2 + 106, 'Space / R', 18, '#9befff');
   }
 
   private toast(message: string): void {
