@@ -14,6 +14,37 @@ export class Effects {
     this.scene.tweens.add({ targets: flash, alpha: 0, duration: this.reducedMotion ? 90 : 180, onComplete: () => flash.destroy() });
   }
 
+  rewardBurst(): void {
+    if (!this.reducedMotion) this.scene.cameras.main.shake(110, 0.003);
+    this.flash(0xffde59, 0.22, 220);
+  }
+
+  stageStart(): void {
+    this.flash(0x00e5ff, 0.12, 260);
+  }
+
+  specialTrigger(): void {
+    if (!this.reducedMotion) this.scene.cameras.main.shake(130, 0.004);
+    this.flash(0xff2bd6, 0.16, 190);
+  }
+
+  hardDropImpact(x: number, y: number, radius: number): void {
+    if (!this.reducedMotion) this.scene.cameras.main.shake(70, 0.0025);
+    const ring = this.scene.add.circle(x, y, Math.max(10, radius), 0xffffff, 0).setStrokeStyle(3, 0x9befff, 0.85);
+    this.scene.tweens.add({
+      targets: ring,
+      radius: radius * 2.1,
+      alpha: 0,
+      duration: this.reducedMotion ? 90 : 180,
+      onComplete: () => ring.destroy()
+    });
+  }
+
+  private flash(tint: number, alpha: number, duration: number): void {
+    const flash = this.scene.add.rectangle(this.scene.scale.width / 2, this.scene.scale.height / 2, this.scene.scale.width, this.scene.scale.height, tint, alpha);
+    this.scene.tweens.add({ targets: flash, alpha: 0, duration: this.reducedMotion ? Math.min(90, duration) : duration, onComplete: () => flash.destroy() });
+  }
+
   private emitLineParticles(profile: LineClearFeedbackProfile): void {
     if (profile.particleCount <= 0) return;
     this.ensureParticleTexture();
