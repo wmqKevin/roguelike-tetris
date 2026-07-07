@@ -1,4 +1,4 @@
-# Neon Breach Tetris v0.1.0 Release Note
+# Neon Breach Tetris v0.2 Release Note
 
 Release date: 2026-07-07
 Platform: Web
@@ -6,46 +6,45 @@ Deployment URL: https://wmqkevin.github.io/roguelike-tetris/
 
 ## Release Scope
 
-This MVP release delivers the first playable web version of the roguelike Tetris project:
+v0.2 updates the playable roguelike Tetris build with five experience improvements approved through ZI-70 and ZI-72:
 
-- Core Tetris loop: falling pieces, movement, rotation, line clear, scoring, gravity, lock delay, and restart.
-- Minimal roguelike loop: stage progression, randomized upgrades, reward selection, and run-based growth.
-- Neon MVP presentation: Phaser rendering, HUD, responsive layout, effects profile, placeholder visual assets, and audio hooks.
-- Local persistence: save service for lightweight run/player state.
+- Stage 1 target adjusted from 6 lines to 4 lines, with clearer target prompts, near-target flashing, and Energy pulse feedback.
+- Reward cards now support mouse selection, hover feedback, keyboard `1` / `2` / `3`, and explicit selection guidance.
+- Upgrade feedback now includes toast messaging, HUD highlighting, layered effects, and stronger audio cues.
+- First-run keyboard guidance fades after the player's first movement or rotation input.
+- Game Over and Victory panels now show a run build review, including acquired upgrades and restart guidance.
 
-## Security Fix
+## Security Status
 
-The release includes the ZI-65 npm audit remediation:
+The v0.2 release retains the ZI-65 npm audit remediation:
 
-- Upgraded `vite` to `8.1.3`.
-- Upgraded `vitest` to `4.1.10`.
-- Upgraded `@vitejs/plugin-basic-ssl` to `2.3.0`.
-- Refreshed `package-lock.json`.
-
-Release verification on the canonical repository passed with `npm audit` reporting 0 vulnerabilities.
+- `vite` is on `8.1.3`.
+- `vitest` is on `4.1.10`.
+- `@vitejs/plugin-basic-ssl` is on `2.3.0`.
+- `npm audit` reports 0 vulnerabilities in release verification.
 
 ## Verification
 
 - `npm install --cache /tmp/npm-cache`: passed, 0 vulnerabilities.
 - `npm audit --cache /tmp/npm-cache`: passed, 0 vulnerabilities.
-- `npm test -- --run`: passed, 2 test files / 7 tests.
+- `npm test -- --run`: passed, 2 test files / 9 tests.
 - `npm run build`: passed.
-- Production artifact: `dist/` size 1.2 MB; main JavaScript `1,208.78 kB`, gzip `323.79 kB`.
+- Production artifact: `dist/` size 1.2 MB; main JavaScript `1,213.75 kB`, gzip `325.43 kB`.
 
 ## Known Risks
 
-- Reward card affordance is still P2: cards look clickable, but the current MVP supports keyboard selection with `1` / `2` / `3` only.
-- Browser compatibility remains smoke-only: verification covered HTTP/build/source/layout checks in this runtime, not real multi-browser screenshot validation.
-- The main JavaScript chunk exceeds Vite's 500 kB warning threshold after minification. This does not block the MVP release, but later releases should evaluate code splitting.
+- Real browser feel was not re-tested in this runtime because Chrome/Chromium is unavailable. This matches the accepted v0.1.0 environment limitation; v0.2 was covered by source review, automated tests, production build, and HTTP smoke verification.
+- BUG-003 remains open: the Game Over/Victory retry affordance is keyboard text (`Space 再来一局`) rather than a clickable button. Keyboard restart works, and CEO accepted this as non-blocking for v0.2.
+- The main JavaScript chunk exceeds Vite's 500 kB warning threshold after minification. This does not block the release, but later releases should evaluate code splitting.
 
 ## Rollback Plan
 
-- GitHub Pages serves the `gh-pages` branch. To roll back, repoint or force-update `gh-pages` to the previous known-good deploy commit.
-- Canonical source is retained on `main`; release commit history remains traceable by commit SHA.
-- If GitHub Pages configuration causes an availability issue, disable Pages or restore the prior Pages source branch in repository settings.
+- GitHub Pages serves the `gh-pages` branch. To roll back, repoint or force-update `gh-pages` to the previous known-good v0.1.0 deploy commit.
+- Keep the v0.1.0 source and Pages commit SHAs in release/deployment logs so the previous build can be restored without rebuilding.
+- If Pages availability regresses, restore the previous `gh-pages` branch tip or disable Pages temporarily while the branch pointer is corrected.
 
 ## Next Steps
 
-- Add mouse/touch reward-card selection to match visual affordance.
-- Run real browser compatibility checks across Chrome, Edge, Firefox, and common mobile viewport sizes.
+- Target BUG-003 for v0.3 by adding a click/tap retry button to the Game Over/Victory panel.
+- Run real browser compatibility checks across Chrome, Edge, Firefox, and common mobile viewport sizes when a browser-capable runtime is available.
 - Split vendor/game chunks or lazy-load Phaser-heavy modules if load performance becomes a release concern.
