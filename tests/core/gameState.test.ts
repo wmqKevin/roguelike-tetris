@@ -100,6 +100,31 @@ describe('GameState', () => {
     expect(state.piecesUntilReward()).toBe(Number.POSITIVE_INFINITY);
   });
 
+  it('starts a four-piece low-pressure window after the first reward', () => {
+    const state = new GameState('first-reward-relief');
+    state.phase = 'reward';
+    state.rewardOptions = [findUpgrade('precision_hard_drop')];
+
+    state.selectReward(0);
+
+    expect(state.phase).toBe('playing');
+    expect(state.lowPressurePiecesRemaining).toBe(4);
+
+    state.command('HardDrop');
+    expect(state.lowPressurePiecesRemaining).toBe(3);
+  });
+
+  it('emits first reward feedback and a next-step goal', () => {
+    const state = new GameState('reward-feedback');
+    state.phase = 'reward';
+    state.rewardOptions = [findUpgrade('stable_preview')];
+
+    state.selectReward(0);
+
+    expect(state.events).toContainEqual({ type: 'upgradeFeedback', message: 'Next +1', goal: '观察 4 个 Next 规划一次消行' });
+    expect(state.latestUpgradeGoal).toBe('观察 4 个 Next 规划一次消行');
+  });
+
   it('consumes full energy after an energy-triggered reward selection', () => {
     const state = new GameState('energy-reward-reset');
     state.energy = BALANCE.energyMax;
