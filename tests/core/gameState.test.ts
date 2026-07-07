@@ -8,6 +8,7 @@ import { getCells } from '../../src/core/tetrominoes';
 import { PIECE_TYPES } from '../../src/core/tetrominoes';
 import { scoreLineClear } from '../../src/core/scoring';
 import { applyUpgrade, baseModifiers } from '../../src/rogue/upgradeSystem';
+import { BALANCE } from '../../src/data/balance';
 
 describe('SevenBag', () => {
   it('emits each tetromino exactly once per bag', () => {
@@ -70,6 +71,44 @@ describe('GameState', () => {
     expect(state.phase).toBe('reward');
     state.selectReward(0);
     expect(state.highestStageReached).toBe(2);
+  });
+
+  it('consumes full energy after an energy-triggered reward selection', () => {
+    const state = new GameState('energy-reward-reset');
+    state.energy = BALANCE.energyMax;
+    state.phase = 'reward';
+    state.rewardOptions = [findUpgrade('scrap_recycle')];
+
+    state.selectReward(0);
+    expect(state.phase).toBe('playing');
+    expect(state.energy).toBe(0);
+
+    state.command('HardDrop');
+    expect(state.phase).toBe('playing');
+  });
+
+  it('keeps carried energy after a non-full-energy line-target reward selection', () => {
+    const state = new GameState('line-reward-energy-carry');
+    state.energy = 80;
+    state.phase = 'reward';
+    state.rewardOptions = [findUpgrade('stable_gear')];
+
+    state.selectReward(0);
+
+    expect(state.phase).toBe('playing');
+    expect(state.energy).toBe(80);
+  });
+
+  it('applies quick_charge once after consuming a full-energy reward trigger', () => {
+    const state = new GameState('quick-charge-energy-reset');
+    state.energy = BALANCE.energyMax;
+    state.phase = 'reward';
+    state.rewardOptions = [findUpgrade('quick_charge')];
+
+    state.selectReward(0);
+
+    expect(state.phase).toBe('playing');
+    expect(state.energy).toBe(20);
   });
 
   it('applies all P0 upgrade effect paths', () => {
