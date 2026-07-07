@@ -6,7 +6,7 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload(): void {
-    this.load.svg('placeholder_sheet', '/assets/images/neon_breach_placeholder_sheet.svg');
+    this.load.svg('placeholder_sheet', 'assets/images/neon_breach_placeholder_sheet.svg');
   }
 
   create(): void {
