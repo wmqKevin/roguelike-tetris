@@ -20,6 +20,7 @@ export type GameEvent =
   | { type: 'rewardReady'; options: UpgradeConfig[] }
   | { type: 'stageStart'; stage: number }
   | { type: 'gameOver' }
+  | { type: 'special'; kind: CellKind }
   | { type: 'skill'; id: string };
 
 export class GameState {
@@ -34,6 +35,7 @@ export class GameState {
   linesInStage = 0;
   combo = 0;
   stageIndex = 0;
+  highestStageReached = 1;
   piecesLocked = 0;
   rewardOptions: UpgradeConfig[] = [];
   ownedUpgrades: UpgradeConfig[] = [];
@@ -59,6 +61,18 @@ export class GameState {
 
   currentStage() {
     return STAGES[this.stageIndex] ?? STAGES[STAGES.length - 1];
+  }
+
+  linesUntilReward(): number {
+    return Math.max(0, this.currentStage().lineTarget - this.linesInStage);
+  }
+
+  gameOverProgressText(): string {
+    const nextStage = Math.min(this.stageIndex + 2, STAGES.length);
+    const remaining = this.linesUntilReward();
+    if (this.phase === 'victory') return '已突破最终阶段';
+    if (remaining <= 0) return `已达成 Stage ${nextStage} 奖励条件`;
+    return `差 ${remaining} 行进入 Stage ${nextStage}`;
   }
 
   step(deltaMs: number): void {
@@ -96,6 +110,7 @@ export class GameState {
     this.modifiers = applyUpgrade(this.modifiers, upgrade);
     this.rewardOptions = [];
     this.stageIndex += 1;
+    this.highestStageReached = Math.max(this.highestStageReached, this.stageIndex + 1);
     if (this.stageIndex >= STAGES.length) {
       this.phase = 'victory';
       return;
@@ -166,6 +181,7 @@ export class GameState {
   }
 
   private lockActive(hardDrop = false): void {
+    const special = this.active.special;
     this.board.lock(this.active);
     this.piecesLocked += 1;
     const result = this.board.clearLines();
@@ -181,6 +197,7 @@ export class GameState {
     } else {
       this.combo = 0;
     }
+    if (special && special !== 'normal') this.events.push({ type: 'special', kind: special });
     this.events.push({ type: 'lock', hardDrop });
     this.checkStageComplete();
     if (this.phase === 'playing') this.spawn();
