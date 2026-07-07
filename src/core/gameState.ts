@@ -18,6 +18,7 @@ export type GameEvent =
   | { type: 'lock'; hardDrop?: boolean }
   | { type: 'lineClear'; lines: number; score: number }
   | { type: 'rewardReady'; options: UpgradeConfig[] }
+  | { type: 'upgradeFeedback'; message: string; goal: string }
   | { type: 'stageStart'; stage: number }
   | { type: 'gameOver' }
   | { type: 'special'; kind: CellKind }
@@ -41,6 +42,8 @@ export class GameState {
   ownedUpgrades: UpgradeConfig[] = [];
   modifiers: UpgradeModifiers = baseModifiers();
   events: GameEvent[] = [];
+  lowPressurePiecesRemaining = 0;
+  latestUpgradeGoal = '';
 
   private rng: Rng;
   private bag: SevenBag;
@@ -84,6 +87,22 @@ export class GameState {
     return `差 ${remaining} 行进入 Stage ${nextStage}`;
   }
 
+  runStyleLabel(): string {
+    const tags = new Set(this.ownedUpgrades.flatMap((upgrade) => upgrade.tags));
+    if (tags.has('skill')) return '清场流';
+    if (tags.has('vision')) return '预判流';
+    if (tags.has('energy')) return '硬降充能';
+    if (tags.has('defense')) return '防守续航';
+    if (tags.has('special')) return '特殊块爆发';
+    if (tags.has('tetris')) return '四消爆发';
+    return this.ownedUpgrades.length > 0 ? '稳健成长' : '基础挑战';
+  }
+
+  nextRunGoalText(): string {
+    if (this.phase === 'victory') return '挑战更高分数';
+    return `进入 Stage ${Math.min(this.highestStageReached + 1, STAGES.length)}`;
+  }
+
   step(deltaMs: number): void {
     if (this.phase !== 'playing') return;
     this.gravityElapsed += deltaMs;
@@ -116,8 +135,11 @@ export class GameState {
     const upgrade = this.rewardOptions[index];
     if (!upgrade) return;
     const consumedEnergyReward = this.energy >= BALANCE.energyMax;
+    const isFirstReward = this.ownedUpgrades.length === 0;
     this.ownedUpgrades.push(upgrade);
     this.modifiers = applyUpgrade(this.modifiers, upgrade);
+    this.latestUpgradeGoal = this.upgradeGoal(upgrade);
+    this.events.push({ type: 'upgradeFeedback', message: this.upgradeFeedback(upgrade), goal: this.latestUpgradeGoal });
     this.rewardOptions = [];
     this.stageIndex += 1;
     this.highestStageReached = Math.max(this.highestStageReached, this.stageIndex + 1);
@@ -127,6 +149,7 @@ export class GameState {
     }
     if (consumedEnergyReward) this.energy = 0;
     this.startStage(this.stageIndex);
+    if (isFirstReward) this.lowPressurePiecesRemaining = 4;
     this.phase = 'playing';
   }
 
@@ -195,6 +218,7 @@ export class GameState {
     const special = this.active.special;
     this.board.lock(this.active);
     this.piecesLocked += 1;
+    if (this.lowPressurePiecesRemaining > 0) this.lowPressurePiecesRemaining -= 1;
     const result = this.board.clearLines();
     if (result.cleared > 0) {
       this.combo += 1;
@@ -237,7 +261,8 @@ export class GameState {
 
   private effectiveGravity(): number {
     const stage = this.currentStage();
-    return Math.min(10, stage.gravityLevel + (stage.affixes.includes('accelerating_storm') ? 1 : 0));
+    const pressureRelief = this.lowPressurePiecesRemaining > 0 ? 1 : 0;
+    return Math.max(1, Math.min(10, stage.gravityLevel + (stage.affixes.includes('accelerating_storm') ? 1 : 0) - pressureRelief));
   }
 
   private addEnergy(amount: number): void {
@@ -258,6 +283,53 @@ export class GameState {
 
   private rewardPieceTarget(): number {
     return this.hasFirstRewardSafetyNet() ? 12 : Number.POSITIVE_INFINITY;
+  }
+
+  private upgradeFeedback(upgrade: UpgradeConfig): string {
+    switch (upgrade.effect) {
+      case 'preview_plus':
+        return `Next +${Number(upgrade.params.amount ?? 1)}`;
+      case 'hard_drop_energy':
+        return `硬降能量 +${Math.round((Number(upgrade.params.multiplier ?? 1) - 1) * 100)}%`;
+      case 'stage_energy':
+        return `开局能量 +${Number(upgrade.params.amount ?? 0)}`;
+      case 'lock_delay':
+        return `锁定延迟 +${Math.round(Number(upgrade.params.amountMs ?? 0) / 10) / 100}s`;
+      case 'tetris_energy':
+        return `四消能量 +${Number(upgrade.params.amount ?? 0)}`;
+      case 'line_score':
+        return `消行分数 +${Math.round((Number(upgrade.params.multiplier ?? 1) - 1) * 100)}%`;
+      case 'fragment_bonus':
+        return `碎片 +${Number(upgrade.params.amount ?? 0)}`;
+      case 'garbage_shield':
+        return '垃圾行抵消 +1';
+      case 'bomb_every_n':
+        return `炸弹块每 ${Number(upgrade.params.interval ?? 12)} 块`;
+      case 'ghost_every_n':
+        return `幽灵块每 ${Number(upgrade.params.interval ?? 10)} 块`;
+      case 'line_clear_skill':
+      case 'i_call_skill':
+        return '技能已解锁';
+    }
+  }
+
+  private upgradeGoal(upgrade: UpgradeConfig): string {
+    switch (upgrade.effect) {
+      case 'preview_plus':
+        return '观察 4 个 Next 规划一次消行';
+      case 'hard_drop_energy':
+        return '用精准硬降攒 40 能量';
+      case 'line_clear_skill':
+        return '攒到 100 能量清底一行';
+      case 'i_call_skill':
+        return '攒到 160 能量呼叫长条';
+      case 'tetris_energy':
+        return '为一次四消预留井口';
+      case 'garbage_shield':
+        return '利用缓冲推进到下一阶段';
+      default:
+        return `用${upgrade.name}进入下一阶段`;
+    }
   }
 
   private nextSpecialKind(): CellKind | undefined {
