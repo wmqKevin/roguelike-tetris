@@ -12,7 +12,7 @@ export type StageConfig = {
 };
 
 export const STAGES: StageConfig[] = [
-  { id: 1, kind: 'normal', gravityLevel: 1, lineTarget: 6, garbageRows: 0, affixes: [], rewardTier: 'common_plus' },
+  { id: 1, kind: 'normal', gravityLevel: 1, lineTarget: 4, garbageRows: 0, affixes: [], rewardTier: 'common_plus' },
   { id: 2, kind: 'normal', gravityLevel: 1, lineTarget: 8, garbageRows: 0, affixes: [], rewardTier: 'common_plus' },
   { id: 3, kind: 'elite', gravityLevel: 2, lineTarget: 12, garbageRows: 1, affixes: ['accelerating_storm'], rewardTier: 'rare_plus' },
   { id: 4, kind: 'normal', gravityLevel: 2, lineTarget: 10, garbageRows: 1, affixes: [], rewardTier: 'common_plus' },
