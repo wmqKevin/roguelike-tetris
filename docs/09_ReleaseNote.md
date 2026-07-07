@@ -1,8 +1,51 @@
-# Neon Breach Tetris v0.2.1 Release Note
+# Neon Breach Tetris v0.3.0 Release Note
 
 Release date: 2026-07-07
 Platform: Web
 Deployment URL: https://wmqkevin.github.io/roguelike-tetris/
+
+## v0.3.0 Release
+
+v0.3.0 focuses on onboarding reliability and late-run clarity for the playable
+roguelike Tetris build.
+
+### Release Scope
+
+- P0: The first reward is now guaranteed to come from the intended opening
+  reward pool when the player reaches the first reward opportunity.
+- P0: Game Over and Victory panels now include a clickable/tappable restart
+  button while retaining `Space` / `R` keyboard restart support.
+- P1: Upgrade feedback and HUD emphasis are clearer after reward selection.
+- P1: Ghost piece visuals are easier to distinguish from locked blocks.
+- P1: Static asset paths now resolve from the GitHub Pages subpath without 404s.
+
+### Verification
+
+- `npm install`: required before release verification.
+- `npm audit`: required to report 0 high/critical vulnerabilities.
+- `npm test`: required to pass all automated tests.
+- `npm run build`: required to produce the production bundle.
+- GitHub Pages HTTP smoke: root page and the new hashed JavaScript asset must
+  return 200; the superseded v0.2.1 JavaScript asset should return 404 after
+  deployment cleanup.
+
+### Known Risks
+
+- P2 polish items are deferred to v0.4, including deeper play-feel tuning,
+  broader cross-browser manual testing, and bundle-splitting/performance work.
+- The main JavaScript chunk is expected to remain above Vite's 500 kB warning
+  threshold because Phaser is bundled with the game.
+
+### Rollback Plan
+
+- GitHub Pages serves the `gh-pages` branch. To roll back to v0.2.1, restore
+  deploy commit `8d30736c4d943d4187e75b7cb6daf0612820f6d8`.
+- To roll back to v0.2.0, restore deploy commit
+  `bbee62057110f61d92d281cdcb359d98d1d3ee2d`.
+- To roll back to v0.1.0, restore deploy commit
+  `1598e42d7b984c08533349a12d72d9cc26a781f6`.
+- Keep source and Pages commit SHAs in release/deployment logs so the previous
+  build can be restored without rebuilding.
 
 ## v0.2.1 Hotfix
 
