@@ -10,7 +10,7 @@ Date: 2026-07-07
 |---|---|---|---|---|
 | BUG-001 | P1 | Development | Was Yes | Closed in v0.2 |
 | BUG-002 | P2 | Development | No | Closed in v0.2 |
-| BUG-003 | P2 | Development | No | Open |
+| BUG-003 | P2 | Development | No | 已修 |
 | BUG-004 | P1 | Development | Yes | Fixed for v0.2 hotfix |
 
 ## BUG-001 - npm audit reports high/critical vulnerabilities in dev toolchain
@@ -57,7 +57,7 @@ Closed. The previous affordance mismatch is fixed in the v0.2 candidate.
 Severity: P2
 Owner: Development
 Blocks release: No
-Status: Open
+Status: 已修
 
 ### Evidence
 
@@ -81,9 +81,9 @@ If the v0.2 requirement is interpreted literally, the terminal panel should prov
 
 The game can restart with `Space`, but the retry affordance is not mouse-clickable.
 
-### Recommendation
+### Resolution
 
-Add a click/tap retry button to the Game Over/Victory panel, or update the product wording to accept keyboard-only restart for the desktop MVP.
+v0.3 adds a clickable/touchable `再来一局` button to the Game Over and Victory terminal panels. The existing `Space` / `R` keyboard restart paths remain available.
 
 ## BUG-004 - Energy-triggered reward repeats after selecting an upgrade
 
