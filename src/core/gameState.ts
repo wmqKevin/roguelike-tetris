@@ -106,6 +106,7 @@ export class GameState {
   selectReward(index: number): void {
     const upgrade = this.rewardOptions[index];
     if (!upgrade) return;
+    const consumedEnergyReward = this.energy >= BALANCE.energyMax;
     this.ownedUpgrades.push(upgrade);
     this.modifiers = applyUpgrade(this.modifiers, upgrade);
     this.rewardOptions = [];
@@ -115,6 +116,7 @@ export class GameState {
       this.phase = 'victory';
       return;
     }
+    if (consumedEnergyReward) this.energy = 0;
     this.startStage(this.stageIndex);
     this.phase = 'playing';
   }
