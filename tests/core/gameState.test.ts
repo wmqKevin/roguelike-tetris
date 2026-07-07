@@ -54,6 +54,24 @@ describe('GameState', () => {
     expect(state.rewardOptions.length).toBeGreaterThan(0);
   });
 
+  it('uses the v0.2 first-stage target and progress copy', () => {
+    const state = new GameState('stage-one');
+    expect(state.currentStage().lineTarget).toBe(4);
+    expect(state.linesUntilReward()).toBe(4);
+    state.linesInStage = 3;
+    expect(state.linesUntilReward()).toBe(1);
+    expect(state.gameOverProgressText()).toBe('差 1 行进入 Stage 2');
+  });
+
+  it('tracks highest stage reached after a reward selection', () => {
+    const state = new GameState('highest-stage');
+    state.energy = 199;
+    state.command('HardDrop');
+    expect(state.phase).toBe('reward');
+    state.selectReward(0);
+    expect(state.highestStageReached).toBe(2);
+  });
+
   it('applies all P0 upgrade effect paths', () => {
     let modifiers = baseModifiers();
     for (const id of ['stable_preview', 'precision_hard_drop', 'quick_charge', 'stable_gear', 'tetris_charge', 'scrap_recycle', 'blast_core', 'ghost_lattice', 'defense_plate', 'line_clearer', 'i_call']) {
