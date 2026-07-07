@@ -11,6 +11,7 @@ Date: 2026-07-07
 | BUG-001 | P1 | Development | Was Yes | Closed in v0.2 |
 | BUG-002 | P2 | Development | No | Closed in v0.2 |
 | BUG-003 | P2 | Development | No | Open |
+| BUG-004 | P1 | Development | Yes | Fixed for v0.2 hotfix |
 
 ## BUG-001 - npm audit reports high/critical vulnerabilities in dev toolchain
 
@@ -83,3 +84,28 @@ The game can restart with `Space`, but the retry affordance is not mouse-clickab
 ### Recommendation
 
 Add a click/tap retry button to the Game Over/Victory panel, or update the product wording to accept keyboard-only restart for the desktop MVP.
+
+## BUG-004 - Energy-triggered reward repeats after selecting an upgrade
+
+Severity: P1
+Owner: Development
+Blocks release: Yes
+Status: Fixed for v0.2 hotfix
+
+### Evidence
+
+When a reward is triggered by full energy, `checkStageComplete()` caps energy at `BALANCE.energyMax` and enters the reward phase. Before this hotfix, `selectReward()` advanced to the next stage through `startStage()`, which reset `linesInStage` but left energy at 200. The next locked piece immediately satisfied `energy >= BALANCE.energyMax` again, reopening the reward panel.
+
+The player report mentioned `scrap_recycle` / `废料回收`. That upgrade only increases line-clear fragments; it does not directly trigger rewards. It was easy to associate with the bug because it is a common reward and could be selected from the repeated reward panel.
+
+### Resolution
+
+`selectReward()` now detects rewards selected while energy is full and consumes that energy before the next stage starts. Line-target rewards with non-full energy keep their existing energy carryover.
+
+### Regression
+
+Added Vitest regression coverage for:
+
+- Full-energy reward selection with `scrap_recycle`, followed by another hard drop that must remain in the playing phase instead of immediately reopening rewards.
+- Line-target rewards with non-full energy retaining carried energy.
+- Full-energy rewards with `quick_charge` consuming the trigger first, then applying the stage-start energy bonus exactly once.
