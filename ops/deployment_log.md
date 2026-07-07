@@ -1,5 +1,32 @@
 # Deployment Log
 
+## 2026-07-07 - v0.2.1 Hotfix Web Release
+
+- Issue: ZI-76
+- Hotfix source: ZI-73
+- Platform: GitHub Pages
+- URL: https://wmqkevin.github.io/roguelike-tetris/
+- Source branch: `main`
+- Source release commit: `31d2120f23f74236ec719139b831c65ab79082d5`
+- Deploy branch: `gh-pages`
+- Deploy commit: `8d30736c4d943d4187e75b7cb6daf0612820f6d8`
+- Build command: `npm run build`
+- Artifact: `dist/`
+- Artifact size: 1.3 MB
+- Main JS: `dist/assets/index-Cc6V5AwV.js` (`1,213.81 kB`, gzip `325.44 kB`)
+- Verification:
+  - `npm install --cache /tmp/npm-cache`: passed, 0 vulnerabilities
+  - `npm audit --cache /tmp/npm-cache`: passed, 0 vulnerabilities
+  - `npm test`: passed, 2 files / 12 tests
+  - `npm run build`: passed
+  - HTTP smoke: root returned 200, new JS returned 200, old v0.2 JS returned 404
+- Rollback:
+  - Restore `gh-pages` to v0.2.0 deploy commit `bbee62057110f61d92d281cdcb359d98d1d3ee2d`, or restore v0.1.0 deploy commit `1598e42d7b984c08533349a12d72d9cc26a781f6`.
+- Known residual risks:
+  - Real browser interactive play was not re-tested in this runtime.
+  - BUG-003 remains open for v0.3: Game Over/Victory retry is keyboard `Space` text, not a clickable button.
+  - The main JavaScript chunk exceeds Vite's 500 kB warning threshold after minification.
+
 ## 2026-07-07 - v0.2 Web Release
 
 - Issue: ZI-71
