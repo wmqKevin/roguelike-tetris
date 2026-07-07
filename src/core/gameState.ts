@@ -10,7 +10,7 @@ import { createRng, type Rng } from './rng';
 import { scoreLineClear } from './scoring';
 import { tryRotate } from './srs';
 import { applyUpgrade, baseModifiers, type UpgradeModifiers } from '../rogue/upgradeSystem';
-import { createRewardOptions } from '../rogue/rewardPool';
+import { createFirstRewardOptions, createRewardOptions } from '../rogue/rewardPool';
 
 export type GamePhase = 'title' | 'playing' | 'reward' | 'paused' | 'game_over' | 'victory';
 
@@ -64,7 +64,16 @@ export class GameState {
   }
 
   linesUntilReward(): number {
-    return Math.max(0, this.currentStage().lineTarget - this.linesInStage);
+    return Math.max(0, this.rewardLineTarget() - this.linesInStage);
+  }
+
+  energyUntilReward(): number {
+    return Math.max(0, this.rewardEnergyTarget() - this.energy);
+  }
+
+  piecesUntilReward(): number {
+    if (!this.hasFirstRewardSafetyNet()) return Number.POSITIVE_INFINITY;
+    return Math.max(0, 12 - this.piecesLocked);
   }
 
   gameOverProgressText(): string {
@@ -206,9 +215,10 @@ export class GameState {
   }
 
   private checkStageComplete(): void {
-    if (this.linesInStage >= this.currentStage().lineTarget || this.energy >= BALANCE.energyMax) {
+    if (this.linesInStage >= this.rewardLineTarget() || this.energy >= this.rewardEnergyTarget() || this.piecesLocked >= this.rewardPieceTarget()) {
       this.energy = Math.min(this.energy, BALANCE.energyMax);
-      this.rewardOptions = createRewardOptions(this.rng, this.ownedUpgrades.map((upgrade) => upgrade.id));
+      const owned = this.ownedUpgrades.map((upgrade) => upgrade.id);
+      this.rewardOptions = this.hasFirstRewardSafetyNet() ? createFirstRewardOptions(owned) : createRewardOptions(this.rng, owned);
       this.phase = 'reward';
       this.events.push({ type: 'rewardReady', options: this.rewardOptions });
     }
@@ -217,6 +227,7 @@ export class GameState {
   private startStage(index: number): void {
     const stage = STAGES[index];
     this.linesInStage = 0;
+    this.piecesLocked = 0;
     const shielded = this.modifiers.garbageShield > 0;
     if (stage?.garbageRows && !shielded) this.board.addGarbageRows(stage.garbageRows, Math.floor(this.rng() * 10));
     if (this.modifiers.stageEnergyBonus) this.addEnergy(this.modifiers.stageEnergyBonus);
@@ -231,6 +242,22 @@ export class GameState {
 
   private addEnergy(amount: number): void {
     this.energy = Math.max(0, Math.min(BALANCE.energyMax, this.energy + amount));
+  }
+
+  private hasFirstRewardSafetyNet(): boolean {
+    return this.stageIndex === 0 && this.ownedUpgrades.length === 0;
+  }
+
+  private rewardLineTarget(): number {
+    return this.hasFirstRewardSafetyNet() ? 2 : this.currentStage().lineTarget;
+  }
+
+  private rewardEnergyTarget(): number {
+    return this.hasFirstRewardSafetyNet() ? 120 : BALANCE.energyMax;
+  }
+
+  private rewardPieceTarget(): number {
+    return this.hasFirstRewardSafetyNet() ? 12 : Number.POSITIVE_INFINITY;
   }
 
   private nextSpecialKind(): CellKind | undefined {
