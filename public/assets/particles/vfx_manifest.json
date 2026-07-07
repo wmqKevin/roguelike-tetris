@@ -1,0 +1,83 @@
+{
+  "style": "neon_breach",
+  "version": 1,
+  "vfx": {
+    "line_clear_single": {
+      "flashMs": 60,
+      "particles": 10,
+      "shakePx": 1,
+      "colors": ["#00E5FF"],
+      "reduced": {
+        "flashMs": 50,
+        "particles": 2,
+        "shakePx": 0
+      }
+    },
+    "line_clear_double": {
+      "flashMs": 90,
+      "particles": 22,
+      "shakePx": 2,
+      "colors": ["#00E5FF", "#45FF99"],
+      "reduced": {
+        "flashMs": 60,
+        "particles": 4,
+        "shakePx": 0
+      }
+    },
+    "line_clear_triple": {
+      "flashMs": 120,
+      "particles": 36,
+      "shakePx": 3,
+      "colors": ["#00E5FF", "#B85CFF"],
+      "reduced": {
+        "flashMs": 70,
+        "particles": 7,
+        "shakePx": 0
+      }
+    },
+    "line_clear_tetris": {
+      "flashMs": 160,
+      "particles": 72,
+      "shakePx": 5,
+      "colors": ["#EAF2FF", "#00E5FF", "#B85CFF"],
+      "reduced": {
+        "flashMs": 90,
+        "particles": 12,
+        "shakePx": 0
+      }
+    },
+    "hard_drop": {
+      "impactMs": 80,
+      "particles": 18,
+      "shakePx": 2,
+      "colors": ["#00E5FF", "#EAF2FF"],
+      "reduced": {
+        "impactMs": 60,
+        "particles": 0,
+        "shakePx": 0
+      }
+    },
+    "reward_select": {
+      "pulseMs": 180,
+      "particles": 24,
+      "shakePx": 0,
+      "colors": ["#B85CFF", "#00E5FF"],
+      "reduced": {
+        "pulseMs": 100,
+        "particles": 3,
+        "shakePx": 0
+      }
+    },
+    "game_over": {
+      "scanlineMs": 420,
+      "particles": 0,
+      "shakePx": 4,
+      "colors": ["#FF3B6B"],
+      "reduced": {
+        "scanlineMs": 0,
+        "particles": 0,
+        "shakePx": 0
+      }
+    }
+  }
+}

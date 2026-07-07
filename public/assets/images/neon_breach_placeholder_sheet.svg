@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 .8 0" result="glow"/>
+      <feMerge>
+        <feMergeNode in="glow"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <linearGradient id="panel" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#101525"/>
+      <stop offset="1" stop-color="#070812"/>
+    </linearGradient>
+    <symbol id="cell" viewBox="0 0 64 64">
+      <rect x="4" y="4" width="56" height="56" rx="6" fill="currentColor" opacity=".28"/>
+      <rect x="8" y="8" width="48" height="48" rx="4" fill="currentColor" opacity=".86"/>
+      <path d="M11 12h38M11 12v38" stroke="#EAF2FF" stroke-width="3" stroke-linecap="round" opacity=".35"/>
+      <path d="M14 52h38M52 14v38" stroke="#070812" stroke-width="3" stroke-linecap="round" opacity=".55"/>
+      <rect x="18" y="18" width="28" height="28" rx="3" fill="#EAF2FF" opacity=".08"/>
+    </symbol>
+  </defs>
+
+  <rect width="1024" height="1024" fill="#070812"/>
+  <g font-family="Arial, sans-serif" font-size="18" fill="#8EA3C8">
+    <text x="32" y="24">Neon Breach placeholder sheet - replace with final PNG/WebP assets later</text>
+  </g>
+
+  <g filter="url(#glow)">
+    <g color="#00E5FF" transform="translate(32 32)"><use href="#cell"/><text x="27" y="40" fill="#071018" font-size="22" font-family="Arial" font-weight="700">I</text></g>
+    <g color="#FFE45C" transform="translate(112 32)"><use href="#cell"/><text x="25" y="40" fill="#211A00" font-size="22" font-family="Arial" font-weight="700">O</text></g>
+    <g color="#B85CFF" transform="translate(192 32)"><use href="#cell"/><text x="26" y="40" fill="#13001F" font-size="22" font-family="Arial" font-weight="700">T</text></g>
+    <g color="#45FF99" transform="translate(272 32)"><use href="#cell"/><text x="26" y="40" fill="#00200C" font-size="22" font-family="Arial" font-weight="700">S</text></g>
+    <g color="#FF3B6B" transform="translate(352 32)"><use href="#cell"/><text x="26" y="40" fill="#260006" font-size="22" font-family="Arial" font-weight="700">Z</text></g>
+    <g color="#4B7CFF" transform="translate(432 32)"><use href="#cell"/><text x="27" y="40" fill="#000B28" font-size="22" font-family="Arial" font-weight="700">J</text></g>
+    <g color="#FF8A2A" transform="translate(512 32)"><use href="#cell"/><text x="27" y="40" fill="#281000" font-size="22" font-family="Arial" font-weight="700">L</text></g>
+  </g>
+
+  <g transform="translate(32 128)">
+    <rect x="4" y="4" width="56" height="56" rx="6" fill="#2D3445"/>
+    <rect x="9" y="9" width="46" height="46" rx="4" fill="#596174"/>
+    <path d="M13 48L48 13M20 56L56 20" stroke="#101525" stroke-width="5" opacity=".7"/>
+    <path d="M12 15h28" stroke="#8EA3C8" stroke-width="3" opacity=".45"/>
+  </g>
+  <g transform="translate(112 128)" filter="url(#glow)">
+    <rect x="4" y="4" width="56" height="56" rx="6" fill="#4A1020"/>
+    <rect x="10" y="10" width="44" height="44" rx="4" fill="#FF3B6B" opacity=".7"/>
+    <path d="M17 17l30 30M47 17L17 47" stroke="#070812" stroke-width="7" stroke-linecap="round"/>
+    <path d="M17 17l30 30M47 17L17 47" stroke="#EAF2FF" stroke-width="2" stroke-linecap="round" opacity=".65"/>
+  </g>
+  <g transform="translate(192 128)" filter="url(#glow)">
+    <rect x="4" y="4" width="56" height="56" rx="6" fill="#3A2700"/>
+    <rect x="10" y="10" width="44" height="44" rx="4" fill="#FFB000" opacity=".75"/>
+    <path d="M20 10l8 18-12 8 17 6-4 14M43 12l-7 14 11 10-16 8" fill="none" stroke="#EAF2FF" stroke-width="3" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(272 128)" filter="url(#glow)">
+    <rect x="4" y="4" width="56" height="56" rx="6" fill="#101525"/>
+    <rect x="10" y="10" width="44" height="44" rx="4" fill="#342040"/>
+    <circle cx="32" cy="32" r="16" fill="#00E5FF" opacity=".8"/>
+    <circle cx="32" cy="32" r="23" fill="none" stroke="#FF3B6B" stroke-width="4"/>
+    <path d="M32 13v8M32 43v8M13 32h8M43 32h8" stroke="#FFE45C" stroke-width="3" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(352 128)" filter="url(#glow)">
+    <rect x="5" y="5" width="54" height="54" rx="6" fill="#00E5FF" opacity=".12"/>
+    <rect x="10" y="10" width="44" height="44" rx="4" fill="#00E5FF" opacity=".18" stroke="#00E5FF" stroke-width="3"/>
+    <path d="M14 24h36M14 39h36" stroke="#EAF2FF" stroke-width="2" opacity=".3"/>
+  </g>
+
+  <g transform="translate(32 240)">
+    <rect x="0" y="0" width="360" height="672" rx="10" fill="#070812" stroke="#00E5FF" stroke-width="4"/>
+    <rect x="12" y="12" width="336" height="648" rx="4" fill="#0A1020" stroke="#26304A" stroke-width="2"/>
+    <g stroke="#26304A" stroke-width="1" opacity=".75">
+      <path d="M45 12v648M79 12v648M113 12v648M147 12v648M181 12v648M215 12v648M249 12v648M283 12v648M317 12v648"/>
+      <path d="M12 44h336M12 76h336M12 108h336M12 140h336M12 172h336M12 204h336M12 236h336M12 268h336M12 300h336M12 332h336M12 364h336M12 396h336M12 428h336M12 460h336M12 492h336M12 524h336M12 556h336M12 588h336M12 620h336"/>
+    </g>
+  </g>
+
+  <g transform="translate(432 240)">
+    <rect x="0" y="0" width="320" height="180" rx="8" fill="url(#panel)" stroke="#00E5FF" stroke-width="3"/>
+    <rect x="18" y="18" width="64" height="64" rx="8" fill="#101525" stroke="#B85CFF" stroke-width="2"/>
+    <rect x="98" y="24" width="190" height="18" rx="4" fill="#8EA3C8" opacity=".35"/>
+    <rect x="98" y="58" width="170" height="12" rx="3" fill="#8EA3C8" opacity=".2"/>
+    <rect x="28" y="116" width="264" height="14" rx="3" fill="#00E5FF" opacity=".18"/>
+    <rect x="28" y="142" width="210" height="14" rx="3" fill="#00E5FF" opacity=".12"/>
+  </g>
+
+  <g transform="translate(432 456)" filter="url(#glow)">
+    <circle cx="32" cy="32" r="28" fill="#101525" stroke="#00E5FF" stroke-width="3"/>
+    <path d="M32 12l10 20H32l7 20-18-25h12z" fill="#00E5FF"/>
+  </g>
+  <g transform="translate(512 456)" filter="url(#glow)">
+    <circle cx="32" cy="32" r="28" fill="#101525" stroke="#B85CFF" stroke-width="3"/>
+    <path d="M20 48V18h24v30M20 28h24M20 38h24" fill="none" stroke="#B85CFF" stroke-width="5" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(592 456)" filter="url(#glow)">
+    <circle cx="32" cy="32" r="28" fill="#101525" stroke="#FFE45C" stroke-width="3"/>
+    <path d="M20 42h24M24 32h20M28 22h16" stroke="#FFE45C" stroke-width="6" stroke-linecap="round"/>
+  </g>
+</svg>

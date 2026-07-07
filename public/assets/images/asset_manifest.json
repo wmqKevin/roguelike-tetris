@@ -1,0 +1,138 @@
+{
+  "style": "neon_breach",
+  "version": 1,
+  "basePath": "public/assets",
+  "images": [
+    {
+      "id": "placeholder_sheet",
+      "path": "images/neon_breach_placeholder_sheet.svg",
+      "type": "svg_sheet",
+      "size": [1024, 1024],
+      "usage": "MVP graybox and first integration"
+    },
+    {
+      "id": "block_i_default",
+      "sheet": "placeholder_sheet",
+      "region": [32, 32, 64, 64],
+      "targetSize": [32, 32],
+      "replaceWith": "images/blocks/block_i_default_32.png"
+    },
+    {
+      "id": "block_o_default",
+      "sheet": "placeholder_sheet",
+      "region": [112, 32, 64, 64],
+      "targetSize": [32, 32],
+      "replaceWith": "images/blocks/block_o_default_32.png"
+    },
+    {
+      "id": "block_t_default",
+      "sheet": "placeholder_sheet",
+      "region": [192, 32, 64, 64],
+      "targetSize": [32, 32],
+      "replaceWith": "images/blocks/block_t_default_32.png"
+    },
+    {
+      "id": "block_s_default",
+      "sheet": "placeholder_sheet",
+      "region": [272, 32, 64, 64],
+      "targetSize": [32, 32],
+      "replaceWith": "images/blocks/block_s_default_32.png"
+    },
+    {
+      "id": "block_z_default",
+      "sheet": "placeholder_sheet",
+      "region": [352, 32, 64, 64],
+      "targetSize": [32, 32],
+      "replaceWith": "images/blocks/block_z_default_32.png"
+    },
+    {
+      "id": "block_j_default",
+      "sheet": "placeholder_sheet",
+      "region": [432, 32, 64, 64],
+      "targetSize": [32, 32],
+      "replaceWith": "images/blocks/block_j_default_32.png"
+    },
+    {
+      "id": "block_l_default",
+      "sheet": "placeholder_sheet",
+      "region": [512, 32, 64, 64],
+      "targetSize": [32, 32],
+      "replaceWith": "images/blocks/block_l_default_32.png"
+    },
+    {
+      "id": "block_garbage_default",
+      "sheet": "placeholder_sheet",
+      "region": [32, 128, 64, 64],
+      "targetSize": [32, 32],
+      "replaceWith": "images/blocks/block_garbage_default_32.png"
+    },
+    {
+      "id": "block_locked_default",
+      "sheet": "placeholder_sheet",
+      "region": [112, 128, 64, 64],
+      "targetSize": [32, 32],
+      "replaceWith": "images/blocks/block_locked_default_32.png"
+    },
+    {
+      "id": "block_cracked_default",
+      "sheet": "placeholder_sheet",
+      "region": [192, 128, 64, 64],
+      "targetSize": [32, 32],
+      "replaceWith": "images/blocks/block_cracked_default_32.png"
+    },
+    {
+      "id": "block_bomb_default",
+      "sheet": "placeholder_sheet",
+      "region": [272, 128, 64, 64],
+      "targetSize": [32, 32],
+      "replaceWith": "images/blocks/block_bomb_default_32.png"
+    },
+    {
+      "id": "block_ghost_default",
+      "sheet": "placeholder_sheet",
+      "region": [352, 128, 64, 64],
+      "targetSize": [32, 32],
+      "replaceWith": "images/blocks/block_ghost_default_32.png"
+    },
+    {
+      "id": "ui_board_frame",
+      "sheet": "placeholder_sheet",
+      "region": [32, 240, 360, 672],
+      "targetSize": [360, 672],
+      "replaceWith": "images/ui/ui_board_frame_360x672.png"
+    },
+    {
+      "id": "ui_reward_card_rare",
+      "sheet": "placeholder_sheet",
+      "region": [432, 240, 320, 180],
+      "targetSize": [320, 180],
+      "replaceWith": "images/ui/ui_reward_card_rare_320x180.png"
+    },
+    {
+      "id": "icon_energy",
+      "sheet": "placeholder_sheet",
+      "region": [432, 456, 64, 64],
+      "targetSize": [64, 64],
+      "replaceWith": "images/icons/icon_energy_64.png"
+    },
+    {
+      "id": "icon_stage",
+      "sheet": "placeholder_sheet",
+      "region": [512, 456, 64, 64],
+      "targetSize": [64, 64],
+      "replaceWith": "images/icons/icon_stage_64.png"
+    },
+    {
+      "id": "icon_score",
+      "sheet": "placeholder_sheet",
+      "region": [592, 456, 64, 64],
+      "targetSize": [64, 64],
+      "replaceWith": "images/icons/icon_score_64.png"
+    }
+  ],
+  "notes": [
+    "SVG sheet is a development placeholder. Keep IDs stable when replacing with PNG or WebP final art.",
+    "Sheet coordinates are authored at 1024x1024 source scale.",
+    "Phaser can load the SVG directly for early integration or use exported raster regions."
+  ]
+}
