@@ -1,77 +1,85 @@
-# 08_BugList - MVP QA Bug List
+# 08_BugList - v0.2 QA Bug List
 
-Issue: ZI-62  
-Build under test: ZI-61 latest delivery attachment `019f39e7-9708-76d6-979d-1dd608114fd7`  
+Issue: ZI-72
+Build under test: ZI-70 delivery attachment `019f3ba6-b785-7960-8e7a-ecbda7a58852` (`zi-70-v0.2-dev-delivery.tar.gz`)
 Date: 2026-07-07
 
 ## Summary
 
 | Bug ID | Severity | Owner | Blocks release | Status |
 |---|---|---|---|---|
-| BUG-001 | P1 | Development | Yes | Open |
-| BUG-002 | P2 | Development | No | Open |
+| BUG-001 | P1 | Development | Was Yes | Closed in v0.2 |
+| BUG-002 | P2 | Development | No | Closed in v0.2 |
+| BUG-003 | P2 | Development | No | Open |
 
 ## BUG-001 - npm audit reports high/critical vulnerabilities in dev toolchain
 
-Severity: P1  
-Owner: Development  
-Blocks release: Yes, unless release owner explicitly waives because production static deploy does not run the dev/test servers.  
-Status: Open
+Severity: P1
+Owner: Development
+Blocks release: Was Yes
+Status: Closed in v0.2
 
 ### Evidence
 
-Command: `npm audit --json`  
-Result: exit code 1, 5 advisory entries across 3 vulnerable package nodes.
+v0.1.0 QA found high/critical advisories in the previous Vite/Vitest toolchain.
+v0.2 verification against the ZI-70 delivery artifact passes:
 
-Key vulnerable packages:
-- `vitest@2.0.5`: critical advisories for Vitest API/UI server exposure.
-- `vite@5.4.2`: high/moderate advisories including dev server file exposure/path traversal/launch-editor issues.
-- `esbuild` via Vite: moderate dev server request exposure advisory.
+- `npm install --cache /tmp/npm-cache`: passed, `found 0 vulnerabilities`.
+- `npm audit --cache /tmp/npm-cache`: passed, `found 0 vulnerabilities`.
+- Current package versions include `vite@8.1.3`, `vitest@4.1.10`, and `@vitejs/plugin-basic-ssl@2.3.0`.
 
-### Reproduction
+### Resolution
 
-1. Extract `zi-61-mvp-delivery.tar.gz`.
-2. Run `npm install --cache /tmp/npm-cache`.
-3. Run `npm audit --json`.
-4. Observe non-zero exit and high/critical advisories.
-
-### Expected
-
-Release candidate should have no unresolved high/critical audit findings, or a documented release-owner waiver explaining why the findings cannot affect the deployed static artifact.
-
-### Actual
-
-Audit reports 1 high and 1 critical severity vulnerable package summary during QA. npm reports no non-breaking automatic fix path for the current dependency set.
-
-### Recommendation
-
-Upgrade Vite/Vitest to patched versions and rerun `npm test`, `npm run build`, and `npm audit --omit=dev` plus full `npm audit`. If keeping these exact versions, record an explicit waiver before release that production deployment serves only static `dist/` and never exposes Vite/Vitest servers.
+Closed. No high/critical npm audit findings remain in the v0.2 candidate.
 
 ## BUG-002 - Reward cards are not clickable despite card-style selection UI
 
-Severity: P2  
-Owner: Development  
-Blocks release: No  
+Severity: P2
+Owner: Development
+Blocks release: No
+Status: Closed in v0.2
+
+### Evidence
+
+v0.2 reward cards now support both keyboard and mouse selection:
+
+- `src/render/hudRenderer.ts` adds card interactivity, pointer hover feedback, and `pointerdown` selection.
+- Reward panel displays `按 1/2/3 或点击选择`.
+- Keyboard `1` / `2` / `3` selection is preserved.
+
+### Resolution
+
+Closed. The previous affordance mismatch is fixed in the v0.2 candidate.
+
+## BUG-003 - Game Over retry affordance is text/keyboard only, not a clickable button
+
+Severity: P2
+Owner: Development
+Blocks release: No
 Status: Open
 
 ### Evidence
 
-`src/render/hudRenderer.ts` renders three reward cards, but no card has `setInteractive()` or pointer/click handlers. `src/scenes/GameScene.ts` only selects rewards through commands mapped to `Digit1`, `Digit2`, and `Digit3`.
+ZI-70 P1-5 asks for Game Over build review plus a retry button. The v0.2 candidate shows the retry affordance as `Space 再来一局` text and supports keyboard restart, but no mouse-click path is present:
+
+- `src/render/hudRenderer.ts` renders `Space 再来一局` as text in the terminal panel.
+- `src/scenes/GameScene.ts` restarts from terminal states through keyboard commands.
+- No terminal-panel `setInteractive()` / `pointerdown` retry handler was found.
 
 ### Reproduction
 
-1. Enter reward phase by filling energy or completing a stage target.
-2. Click a visible reward card.
-3. Observe no selection path in code; selecting with keyboard 1/2/3 works.
+1. Enter Game Over or Victory.
+2. Inspect the terminal panel.
+3. Observe the retry prompt is keyboard text, not a clickable button.
 
 ### Expected
 
-The visible card UI should support mouse selection, or the UI should clearly present keyboard-only selection as the supported MVP interaction.
+If the v0.2 requirement is interpreted literally, the terminal panel should provide a clickable `再来一局` button in addition to the keyboard shortcut.
 
 ### Actual
 
-Cards look clickable but are keyboard-only.
+The game can restart with `Space`, but the retry affordance is not mouse-clickable.
 
 ### Recommendation
 
-Add pointer handlers to reward cards or revise the reward UI affordance. This can wait until after MVP if keyboard-only desktop control is acceptable.
+Add a click/tap retry button to the Game Over/Victory panel, or update the product wording to accept keyboard-only restart for the desktop MVP.
