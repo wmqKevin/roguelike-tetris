@@ -1,8 +1,22 @@
-# Neon Breach Tetris v0.2 Release Note
+# Neon Breach Tetris v0.2.1 Release Note
 
 Release date: 2026-07-07
 Platform: Web
 Deployment URL: https://wmqkevin.github.io/roguelike-tetris/
+
+## v0.2.1 Hotfix
+
+v0.2.1 fixes BUG-004, where a reward triggered by full energy could immediately
+reopen after the player selected an upgrade. The root cause was that
+`selectReward()` advanced to the next stage without consuming the full-energy
+trigger, so the next locked piece still satisfied the energy reward condition.
+
+The hotfix consumes energy when the selected reward was triggered by full
+energy. Line-target rewards with non-full energy keep their existing energy
+carryover. QA regression covered `scrap_recycle`, non-full-energy line-target
+carryover, and `quick_charge` stage-start energy behavior.
+
+## v0.2 Release
 
 ## Release Scope
 
@@ -27,9 +41,9 @@ The v0.2 release retains the ZI-65 npm audit remediation:
 
 - `npm install --cache /tmp/npm-cache`: passed, 0 vulnerabilities.
 - `npm audit --cache /tmp/npm-cache`: passed, 0 vulnerabilities.
-- `npm test -- --run`: passed, 2 test files / 9 tests.
+- `npm test`: passed, 2 test files / 12 tests.
 - `npm run build`: passed.
-- Production artifact: `dist/` size 1.2 MB; main JavaScript `1,213.75 kB`, gzip `325.43 kB`.
+- Production artifact: `dist/` size 1.3 MB; main JavaScript `1,213.81 kB`, gzip `325.44 kB`.
 
 ## Known Risks
 
@@ -39,8 +53,9 @@ The v0.2 release retains the ZI-65 npm audit remediation:
 
 ## Rollback Plan
 
-- GitHub Pages serves the `gh-pages` branch. To roll back, repoint or force-update `gh-pages` to the previous known-good v0.1.0 deploy commit.
-- Keep the v0.1.0 source and Pages commit SHAs in release/deployment logs so the previous build can be restored without rebuilding.
+- GitHub Pages serves the `gh-pages` branch. To roll back to v0.2.0, restore the previous deploy commit `bbee620`.
+- To roll back to v0.1.0, restore deploy commit `1598e42`.
+- Keep source and Pages commit SHAs in release/deployment logs so the previous build can be restored without rebuilding.
 - If Pages availability regresses, restore the previous `gh-pages` branch tip or disable Pages temporarily while the branch pointer is corrected.
 
 ## Next Steps
