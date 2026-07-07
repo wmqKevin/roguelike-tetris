@@ -1,8 +1,60 @@
-# Neon Breach Tetris v0.3.0 Release Note
+# Neon Breach Tetris v0.4.0 Release Note
 
 Release date: 2026-07-07
 Platform: Web
 Deployment URL: https://wmqkevin.github.io/roguelike-tetris/
+
+## v0.4.0 Release
+
+v0.4.0 focuses on making the first meaningful roguelike loop easier to read,
+safer after the first reward, and playable on narrow mobile screens.
+
+### Release Scope
+
+- P0: Game Over and Victory retry now work through real browser mouse click,
+  touch tap, `Space`, and `R`; the retry hit area is at least 140x52 and was
+  QA-verified on desktop and 390px mobile Chrome.
+- P0: The first reward remains guaranteed, then the run enters a low-pressure
+  buffer so the player can feel the upgrade before the stack immediately
+  punishes them.
+- P1: Reward and upgrade feedback now includes numeric fly-text and clearer
+  next-goal messaging.
+- P1: The terminal summary panel now reports the run build, highest stage, and
+  next target so the player understands why the run ended and what to improve.
+- P1: Mobile HUD layout now uses the displayed canvas width for compact mode;
+  390px viewports fold Hold/Next into the top board area while 520px and wider
+  layouts keep the regular HUD.
+
+### Verification
+
+- `npm install`: required before release verification; expected 0
+  vulnerabilities.
+- `npm audit`: required to report 0 high/critical vulnerabilities.
+- `npm test`: required to pass all automated tests; v0.4 QA accepted 19/19.
+- `npm run build`: required to produce the production bundle.
+- Real Chrome QA gate: retry background/text click, mobile touch tap, `Space`,
+  and `R` all restart to `playing, score=0`; 390px compact HUD and 520px
+  regular HUD both verified.
+- GitHub Pages HTTP smoke: root page and the new hashed JavaScript asset must
+  return 200 after deployment.
+
+### Known Risks
+
+- P2 polish is deferred to v0.5, including deeper play-feel tuning, broader
+  cross-browser/manual device coverage, and performance/bundle-splitting work.
+- The main JavaScript chunk is expected to remain above Vite's 500 kB warning
+  threshold because Phaser is bundled with the game.
+
+### Rollback Plan
+
+- GitHub Pages serves the `gh-pages` branch. To roll back to v0.3.0, restore
+  deploy commit `b8fd540c897ea34a375fabbadce7e7726482fd65`.
+- To roll back to v0.2.1, restore deploy commit
+  `8d30736c4d943d4187e75b7cb6daf0612820f6d8`.
+- To roll back to v0.2.0, restore deploy commit
+  `bbee62057110f61d92d281cdcb359d98d1d3ee2d`.
+- Keep source and Pages commit SHAs in release/deployment logs so the previous
+  build can be restored without rebuilding.
 
 ## v0.3.0 Release
 
