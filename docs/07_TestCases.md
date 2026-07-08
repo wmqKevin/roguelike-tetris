@@ -1,12 +1,12 @@
 # 07_TestCases - MVP QA Test Cases
 
-Issue: ZI-114
-Build under test: v0.8 development patch on v0.7.0 base `aeab311cd900c0151e1a041bc2761533235427d6`
-Date: 2026-07-08
+Issue: ZI-126
+Build under test: v0.9 development patch on v0.8.0 base `1ffe40238e4fa26b7b56580c85f60ec5a1d05315`
+Date: 2026-07-09
 
 ## Scope
 
-MVP scope is the leader-approved cut: desktop keyboard first, first 6-8 stages, no full T-Spin, no touch controls, no permanent meta progression. v0.8 adds 520x390 reward/danger information layering, skill release feedback closure, 10-second first reward trial goals, reward build labels, and settlement build-route progress.
+MVP scope is the leader-approved cut: desktop keyboard first, first 6-8 stages, no full T-Spin, no touch controls, no permanent meta progression. v0.9 strengthens successful C-skill feedback, upgrades first-skill reward safety trial, changes 390 portrait rewards to focused card reading, makes trial completion rewards explicit, and moves run/codex/badge goals into the opening HUD.
 
 ## Test Cases
 
@@ -54,6 +54,11 @@ MVP scope is the leader-approved cut: desktop keyboard first, first 6-8 stages, 
 | TC-040 | First reward trial target | P1 | Unit-test first reward 10-second trial and completion reward | Trial text starts at 10s; first successful use completes target and grants +20 energy / +120 score | PASS |
 | TC-041 | Reward card labels | P1 | Unit-test reward labels | Cards expose recommendation, build-core, shortfall, immediate-effect, and skill-unlock labels | PASS |
 | TC-042 | Settlement build route | P1 | Unit-test route text | Settlement route progress renders examples such as `清场流 2/3` and `预判流 1/3` | PASS |
+| TC-043 | C skill release peak | P0 | Unit-test line-clearer success event and effect sweep | Successful C cast emits `行清除器发动`, spends 100 energy, triggers bottom-row sweep effect | PASS |
+| TC-044 | First skill safety trial | P0 | Unit-test first reward line-clearer safety window | C is castable while gravity danger is frozen; protection ends after the trial completes | PASS |
+| TC-045 | Portrait focused reward cards | P1 | Unit-test 390x844 focused reward layout | Recommended card is focused; non-focused cards fit as compact chips with title/tags only | PASS |
+| TC-046 | Trial completion reward strip | P1 | Unit-test trial completion event payload | Completion emits `+20 能量 / 徽章进度 +1` plus structured reward payload | PASS |
+| TC-047 | Opening long-term goals | P1 | Unit-test opening HUD copy | `本局推荐流派 / 可解锁徽章 / 图鉴进度` text is available before first reward | PASS |
 
 ## Environment
 
