@@ -16,10 +16,24 @@ export class Effects {
     this.scene.tweens.add({ targets: flash, alpha: 0, duration: this.reducedMotion ? 90 : 180, onComplete: () => flash.destroy() });
   }
 
+  tetrisPeak(): void {
+    if (!this.reducedMotion) this.scene.cameras.main.shake(220, 0.008);
+    this.flash(0xff2bd6, 0.32, 280);
+    this.particleRing(this.scene.scale.width / 2, this.scene.scale.height * 0.46, 0xffde59, this.reducedMotion ? 10 : 56, 240);
+    this.floatingText('TETRIS!', this.scene.scale.width / 2, this.scene.scale.height * 0.32, '#ffde59');
+  }
+
   rewardBurst(): void {
     if (!this.reducedMotion) this.scene.cameras.main.shake(130, 0.004);
     this.particleRing(this.scene.scale.width / 2, this.scene.scale.height * 0.36, 0xffde59, 42);
     this.flash(0xffde59, 0.22, 220);
+  }
+
+  firstRewardPeak(): void {
+    if (!this.reducedMotion) this.scene.cameras.main.shake(180, 0.006);
+    this.flash(0xffde59, 0.3, 320);
+    this.particleRing(this.scene.scale.width / 2, this.scene.scale.height * 0.34, 0x9befff, this.reducedMotion ? 8 : 48, 210);
+    this.floatingText('首奖生效', this.scene.scale.width / 2, this.scene.scale.height * 0.26, '#ffde59');
   }
 
   stageStart(): void {
@@ -29,6 +43,13 @@ export class Effects {
   specialTrigger(): void {
     if (!this.reducedMotion) this.scene.cameras.main.shake(130, 0.004);
     this.flash(0xff2bd6, 0.24, 210);
+  }
+
+  skillPeak(): void {
+    if (!this.reducedMotion) this.scene.cameras.main.shake(170, 0.006);
+    this.flash(0x00e5ff, 0.24, 240);
+    this.particleRing(this.scene.scale.width / 2, this.scene.scale.height * 0.48, 0x00e5ff, this.reducedMotion ? 6 : 34, 190);
+    this.floatingText('技能释放', this.scene.scale.width / 2, this.scene.scale.height * 0.38, '#9befff');
   }
 
   hardDropImpact(x: number, y: number, radius: number): void {
