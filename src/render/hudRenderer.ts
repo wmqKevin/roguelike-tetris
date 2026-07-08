@@ -1,9 +1,9 @@
 import Phaser from 'phaser';
 import type { PieceType } from '../types/game';
-import type { GameState } from '../core/gameState';
+import type { GameState, SkillStatus } from '../core/gameState';
 import type { Layout } from './responsiveLayout';
 import { BoardRenderer } from './boardRenderer';
-import type { UpgradeEffect } from '../data/upgrades';
+import type { UpgradeConfig, UpgradeEffect } from '../data/upgrades';
 
 export type TutorialAction = 'move' | 'rotate' | 'hardDrop' | 'hold' | 'reward';
 
@@ -28,6 +28,20 @@ export type ToastLayout = {
   textX: number;
   textY: number;
   textWidth: number;
+};
+
+export type RewardCardLayout = {
+  cardW: number;
+  cardH: number;
+  gap: number;
+  x: number;
+  y: number;
+  textWidth: number;
+  titleY: number;
+  tagY: number;
+  bodyY: number;
+  demoY: number;
+  hintY: number;
 };
 
 export type GameOverPanelLine = {
@@ -69,15 +83,69 @@ export type GameOverPanelCopy = {
 };
 
 export function createToastLayout(width: number, height: number, compact: boolean): ToastLayout {
+  const compactLandscape = compact && width >= height;
   const toastW = compact ? Math.max(160, width - 28) : Math.min(520, width - 28);
+  const y = compactLandscape ? 76 : compact ? Math.max(74, height * 0.14) : height * 0.18;
   return {
     x: width / 2,
-    y: compact ? Math.max(74, height * 0.14) : height * 0.18,
+    y,
     width: toastW,
     textX: width / 2,
-    textY: compact ? Math.max(74, height * 0.14) : height * 0.18,
+    textY: y,
     textWidth: toastW - 28
   };
+}
+
+export function createRewardCardLayout(width: number, layout: Layout, index: number): RewardCardLayout {
+  const narrow = layout.compactHud;
+  const compactLandscape = narrow && !layout.portrait;
+  const cardW = compactLandscape ? Math.max(132, Math.floor((width - (layout.boardX + layout.cell * 10) - 44) / 2)) : narrow ? Math.max(112, Math.floor((width - 34) / 3)) : 200;
+  const cardH = compactLandscape ? 124 : narrow ? 214 : 230;
+  const gap = compactLandscape ? 8 : narrow ? 7 : 20;
+  const startX = compactLandscape ? layout.boardX + layout.cell * 10 + 18 + cardW / 2 : narrow ? 12 + cardW / 2 : layout.boardX - 170;
+  return {
+    cardW,
+    cardH,
+    gap,
+    x: compactLandscape ? startX + (index % 2) * (cardW + gap) : startX + index * (cardW + gap),
+    y: compactLandscape ? 150 + Math.floor(index / 2) * (cardH + gap) : narrow ? Math.max(190, layout.boardY + 98) : layout.boardY + 150,
+    textWidth: cardW - 20,
+    titleY: compactLandscape ? 10 : 14,
+    tagY: compactLandscape ? 36 : 64,
+    bodyY: compactLandscape ? 56 : 91,
+    demoY: compactLandscape ? cardH - 38 : cardH - 58,
+    hintY: cardH - 25
+  };
+}
+
+export function compactRewardStatusText(message: string): string {
+  if (!message) return '';
+  if (message.includes('新手救场')) return '危险状态：已清理底线';
+  if (message.includes('安全演示')) return '危险状态：奖励安全演示中';
+  if (message.includes('顶部危险')) return '危险状态：顶部已处理';
+  return `危险状态：${message.slice(0, 12)}`;
+}
+
+export function rewardCardLabels(upgrade: UpgradeConfig, index = 0): string[] {
+  const labels: string[] = [];
+  if (index === 0) labels.push('推荐');
+  if (upgrade.tags.includes('skill') || upgrade.tags.includes('tetris') || upgrade.tags.includes('special')) labels.push('流派核心');
+  if (upgrade.tags.includes('defense') || upgrade.tags.includes('control') || upgrade.tags.includes('vision')) labels.push('补短板');
+  if (upgrade.effect === 'stage_energy' || upgrade.effect === 'preview_plus' || upgrade.effect === 'hard_drop_energy') labels.push('立即生效');
+  if (upgrade.tags.includes('skill')) labels.push('解锁技能');
+  return labels.slice(0, 3);
+}
+
+export function buildRouteProgressText(upgrades: UpgradeConfig[]): string {
+  const tags = new Set(upgrades.flatMap((upgrade) => upgrade.tags));
+  const skillCount = upgrades.filter((upgrade) => upgrade.tags.includes('skill') || upgrade.tags.includes('energy')).length;
+  const visionCount = upgrades.filter((upgrade) => upgrade.tags.includes('vision') || upgrade.tags.includes('tetris')).length;
+  const defenseCount = upgrades.filter((upgrade) => upgrade.tags.includes('defense') || upgrade.tags.includes('control')).length;
+  if (tags.has('skill')) return `清场流 ${Math.min(3, skillCount)}/3`;
+  if (tags.has('vision')) return `预判流 ${Math.min(3, visionCount)}/3`;
+  if (tags.has('energy')) return `硬降充能 ${Math.min(3, skillCount)}/3`;
+  if (tags.has('defense')) return `防守续航 ${Math.min(3, defenseCount)}/3`;
+  return upgrades.length > 0 ? `稳健成长 ${Math.min(3, upgrades.length)}/3` : '基础挑战 0/3';
 }
 
 function estimateTextHeight(value: string, size: number, textWidth?: number): number {
@@ -190,7 +258,7 @@ export class HudRenderer {
 
   render(state: GameState, layout: Layout, highScore: number, ui: HudUiState): void {
     this.clear();
-    this.stageObjective(state, layout, ui.nowMs);
+    if (!(state.phase === 'reward' && layout.compactHud && !layout.portrait)) this.stageObjective(state, layout, ui.nowMs);
     if (layout.compactHud) this.compactHud(state, layout, highScore, ui);
     else this.wideHud(state, layout, highScore, ui);
 
@@ -198,7 +266,8 @@ export class HudRenderer {
     if (state.phase === 'paused') this.centerPanel('PAUSED', ['P / Esc 继续', 'R 重开']);
     if (state.phase === 'game_over') this.gameOverPanel(state, ui.codex);
     if (state.phase === 'victory') this.gameOverPanel(state, ui.codex, 'BREACH CLEARED');
-    if (ui.toast && ui.nowMs < ui.toast.untilMs) this.toast(ui.toast.message);
+    const compactReward = state.phase === 'reward' && layout.compactHud && !layout.portrait;
+    if (!compactReward && ui.toast && ui.nowMs < ui.toast.untilMs) this.toast(ui.toast.message);
     if (ui.showTutorial && !layout.portrait) this.tutorialHints(layout, ui.usedTutorialActions);
   }
 
@@ -232,6 +301,8 @@ export class HudRenderer {
     this.stat(x, y, 'LINES', `${state.linesInStage} / ${state.linesUntilReward() + state.linesInStage}`, highlight ? '#ffde59' : '#ffffff'); y += 52;
     this.stat(x, y, 'ENERGY', `${Math.floor(state.energy)} / 200`, highlight || 200 - state.energy <= 20 ? '#ffde59' : '#ffffff');
     this.energyBar(x, y + 36, state.energy / 200, ui.nowMs);
+    this.skillPanel(x, y + 58, state.skillStatuses(), ui.nowMs);
+    this.skillTargetPreview(state, layout, ui.nowMs);
     if (state.lowPressurePiecesRemaining > 0) this.text(layout.boardX, layout.boardY + layout.cell * 20 + 42, `低压缓冲 ${state.lowPressurePiecesRemaining} 块`, 16, '#ffde59');
     if (state.dangerHintText) this.text(layout.boardX, layout.boardY + layout.cell * 20 + 68, state.dangerHintText, 16, '#ffde59').setWordWrapWidth(layout.cell * 10);
     else if (state.latestUpgradeGoal) this.text(layout.boardX, layout.boardY + layout.cell * 20 + 68, state.latestUpgradeGoal, 16, '#9befff');
@@ -262,37 +333,45 @@ export class HudRenderer {
         this.boardRenderer.drawMiniPiece(piece, x, y, 12, index === 0 && ui.firstRewardDemo?.effect === 'preview_plus' && ui.nowMs < ui.firstRewardDemo.untilMs ? 1 : 0.9);
       });
     }
-    const goalY = layout.portrait ? this.scene.scale.height - 30 : 62;
-    if (state.firstRewardTrialRemaining > 0) this.text(14, goalY, `${state.firstRewardTrialText}（剩 ${state.firstRewardTrialRemaining}）`, 14, '#ffde59').setWordWrapWidth(this.scene.scale.width - 28);
-    else if (state.dangerHintText) this.text(14, goalY, state.dangerHintText, 15, '#ffde59').setWordWrapWidth(this.scene.scale.width - 28);
-    else if (state.lowPressurePiecesRemaining > 0) this.text(14, goalY, `低压缓冲 ${state.lowPressurePiecesRemaining} 块`, 15, '#ffde59');
-    else if (state.latestUpgradeGoal) this.text(14, goalY, state.latestUpgradeGoal, 15, '#9befff').setWordWrapWidth(360);
+    const compactLandscape = !layout.portrait;
+    const goalY = layout.portrait ? this.scene.scale.height - 30 : state.phase === 'reward' ? 64 : 62;
+    const goalX = compactLandscape && state.phase === 'reward' ? layout.boardX + layout.cell * 10 + 14 : 14;
+    const goalW = compactLandscape && state.phase === 'reward' ? this.scene.scale.width - goalX - 12 : this.scene.scale.width - 28;
+    if (state.firstRewardTrialRemaining > 0) this.text(goalX, goalY, `${state.firstRewardTrialText}（剩 ${state.firstRewardTrialRemaining} 块）`, 14, '#ffde59').setWordWrapWidth(goalW);
+    else if (state.dangerHintText) this.text(goalX, goalY, state.phase === 'reward' && compactLandscape ? compactRewardStatusText(state.dangerHintText) : state.dangerHintText, state.phase === 'reward' && compactLandscape ? 13 : 15, '#ffde59').setWordWrapWidth(goalW);
+    else if (state.lowPressurePiecesRemaining > 0) this.text(goalX, goalY, `低压缓冲 ${state.lowPressurePiecesRemaining} 块`, 15, '#ffde59');
+    else if (state.latestUpgradeGoal && state.phase !== 'reward') this.text(goalX, goalY, state.latestUpgradeGoal, 15, '#9befff').setWordWrapWidth(360);
     if (!layout.portrait) {
       const x = layout.boardX + layout.cell * 10 + 14;
-      this.text(x, 62, state.currentBuildGuidanceText(), 14, '#ffde59').setWordWrapWidth(this.scene.scale.width - x - 10);
+      if (state.phase !== 'reward') this.text(x, 62, state.currentBuildGuidanceText(), 14, '#ffde59').setWordWrapWidth(this.scene.scale.width - x - 10);
+      this.skillPanel(x, 88, state.skillStatuses(), ui.nowMs, true);
+      this.skillTargetPreview(state, layout, ui.nowMs);
     }
   }
 
   private rewardCards(state: GameState, layout: Layout): void {
-    const narrow = layout.compactHud;
-    const compactLandscape = narrow && !layout.portrait;
-    const cardW = compactLandscape ? Math.max(132, Math.floor((this.scene.scale.width - (layout.boardX + layout.cell * 10) - 44) / 2)) : narrow ? Math.max(112, Math.floor((this.scene.scale.width - 34) / 3)) : 200;
-    const cardH = compactLandscape ? 142 : narrow ? 214 : 230;
-    const gap = compactLandscape ? 8 : narrow ? 7 : 20;
-    const startX = compactLandscape ? layout.boardX + layout.cell * 10 + 18 + cardW / 2 : narrow ? 12 + cardW / 2 : layout.boardX - 170;
     state.rewardOptions.forEach((upgrade, index) => {
-      const x = compactLandscape ? startX + (index % 2) * (cardW + gap) : startX + index * (cardW + gap);
-      const y = compactLandscape ? 138 + Math.floor(index / 2) * (cardH + gap) : narrow ? Math.max(190, layout.boardY + 98) : layout.boardY + 150;
-      const card = this.scene.add.container(x, y);
-      const bg = this.scene.add.rectangle(0, 0, cardW, cardH, 0x111a32, 0.96).setStrokeStyle(2, 0x00e5ff, 0.8);
-      const textW = cardW - 24;
-      const title = this.scene.add.text(-textW / 2, -cardH / 2 + 14, `${index + 1}. ${upgrade.name}`, { fontSize: compactLandscape ? '16px' : narrow ? '15px' : '18px', color: '#ffffff', fontStyle: '700', wordWrap: { width: textW } });
-      const rarity = this.scene.add.text(-textW / 2, -cardH / 2 + (compactLandscape ? 40 : 64), upgrade.rarity.toUpperCase(), { fontSize: '12px', color: '#ffde59' });
-      const body = this.scene.add.text(-textW / 2, -cardH / 2 + (compactLandscape ? 60 : 91), upgrade.description, { fontSize: compactLandscape ? '14px' : narrow ? '13px' : '15px', color: '#d7f7ff', wordWrap: { width: textW } });
-      const demo = this.scene.add.text(-textW / 2, cardH / 2 - (compactLandscape ? 36 : 58), this.rewardDemoCopy(upgrade.effect), { fontSize: compactLandscape ? '13px' : narrow ? '12px' : '13px', color: '#ffde59', wordWrap: { width: textW } });
-      const hint = this.scene.add.text(-textW / 2, cardH / 2 - 25, '1/2/3 或点击', { fontSize: '12px', color: '#9befff' });
+      const metrics = createRewardCardLayout(this.scene.scale.width, layout, index);
+      const compactLandscape = layout.compactHud && !layout.portrait;
+      const narrow = layout.compactHud;
+      const card = this.scene.add.container(metrics.x, metrics.y);
+      const rare = upgrade.rarity === 'epic' || upgrade.rarity === 'legendary';
+      const stroke = rare ? 0xffde59 : upgrade.rarity === 'rare' ? 0xff2bd6 : 0x00e5ff;
+      const bg = this.scene.add.rectangle(0, 0, metrics.cardW, metrics.cardH, rare ? 0x1c1734 : 0x111a32, 0.97).setStrokeStyle(rare ? 3 : 2, stroke, rare ? 1 : 0.82);
+      if (rare) {
+        const pulse = 0.18 + Math.sin(this.scene.time.now / 120) * 0.08;
+        const halo = this.scene.add.rectangle(0, 0, metrics.cardW + 8, metrics.cardH + 8, 0xffde59, pulse).setStrokeStyle(1, 0xffde59, 0.4);
+        card.add(halo);
+      }
+      const textW = metrics.textWidth;
+      const labels = rewardCardLabels(upgrade, index).join(' · ');
+      const title = this.scene.add.text(-textW / 2, -metrics.cardH / 2 + metrics.titleY, `${index + 1}. ${upgrade.name}`, { fontSize: compactLandscape ? '15px' : narrow ? '15px' : '18px', color: '#ffffff', fontStyle: '700', wordWrap: { width: textW } });
+      const rarity = this.scene.add.text(-textW / 2, -metrics.cardH / 2 + metrics.tagY, `${upgrade.rarity.toUpperCase()} ${labels}`, { fontSize: compactLandscape ? '10px' : '12px', color: rare ? '#ffde59' : '#9befff', wordWrap: { width: textW } });
+      const body = this.scene.add.text(-textW / 2, -metrics.cardH / 2 + metrics.bodyY, upgrade.description, { fontSize: compactLandscape ? '12px' : narrow ? '13px' : '15px', color: '#d7f7ff', wordWrap: { width: textW } });
+      const demo = this.scene.add.text(-textW / 2, metrics.cardH / 2 - (metrics.cardH - metrics.demoY), this.rewardDemoCopy(upgrade.effect), { fontSize: compactLandscape ? '11px' : narrow ? '12px' : '13px', color: '#ffde59', wordWrap: { width: textW } });
+      const hint = this.scene.add.text(-textW / 2, metrics.cardH / 2 - (metrics.cardH - metrics.hintY), '1/2/3 或点击', { fontSize: '12px', color: '#9befff' });
       card.add([bg, title, rarity, body, demo, hint]);
-      card.setSize(cardW, cardH).setInteractive({ useHandCursor: true });
+      card.setSize(metrics.cardW, metrics.cardH).setInteractive({ useHandCursor: true });
       card.on('pointerover', () => {
         bg.setStrokeStyle(3, 0xffde59, 1);
         card.setScale(1.04);
@@ -318,7 +397,7 @@ export class HudRenderer {
     if (Number.isFinite(pieces)) parts.push(`落 ${pieces} 块`);
     if (layout.compactHud) {
       const x = layout.portrait ? 14 : layout.boardX + layout.cell * 10 + 14;
-      const y = layout.portrait ? 72 : 96;
+      const y = layout.portrait ? 72 : 112;
       this.text(x, y, remaining > 0 ? `目标：再消 ${remaining} 行` : '目标：选择强化继续推进', 15, color).setWordWrapWidth(layout.portrait ? Math.max(220, this.scene.scale.width - 28) : this.scene.scale.width - x - 10);
       const alternates = parts.slice(1);
       if (alternates.length > 0) {
@@ -336,7 +415,7 @@ export class HudRenderer {
       ['move', '<- -> / A-D 移动'],
       ['rotate', '↑ / X 旋转'],
       ['hardDrop', 'Space 硬降'],
-      ['hold', 'C / Shift Hold'],
+      ['hold', 'Shift / V Hold'],
       ['reward', '1/2/3 奖励选择']
     ] as const;
     const visible = hints.filter(([id]) => !used.has(id));
@@ -366,7 +445,7 @@ export class HudRenderer {
       nextRunAdvice: state.nextRunAdviceText(),
       nextRunBuildAdvice: state.nextRunBuildAdviceText(),
       bestPerformance: state.bestPerformanceText(),
-      runStyle: state.runStyleLabel(),
+      runStyle: buildRouteProgressText(state.ownedUpgrades),
       nextRunGoal: state.nextRunGoalText(),
       progress: state.gameOverProgressText(),
       upgrades,
@@ -391,6 +470,30 @@ export class HudRenderer {
     return '试用期 4 块';
   }
 
+  private skillPanel(x: number, y: number, statuses: SkillStatus[], nowMs: number, compact = false): void {
+    if (!statuses.some((skill) => skill.id)) return;
+    const width = compact ? Math.min(190, this.scene.scale.width - x - 10) : 180;
+    statuses.forEach((skill, index) => {
+      const rowY = y + index * (compact ? 24 : 30);
+      const readyPulse = skill.ready ? 0.7 + Math.sin(nowMs / 90) * 0.18 : 0.35;
+      const bg = this.scene.add.rectangle(x + width / 2, rowY + 9, width, compact ? 20 : 24, skill.ready ? 0x163c4d : 0x1b2a46, skill.ready ? readyPulse : 0.68)
+        .setStrokeStyle(skill.ready ? 2 : 1, skill.ready ? 0xffde59 : 0x75a7ba, skill.ready ? 0.92 : 0.55);
+      this.cards.push(this.scene.add.container(0, 0, [bg]));
+      const label = skill.id ? `${skill.key} ${skill.name} ${skill.ready ? skill.action : skill.reason}` : `${skill.key} 未解锁`;
+      this.text(x + 8, rowY, label, compact ? 12 : 13, skill.ready ? '#ffde59' : '#9befff').setWordWrapWidth(width - 16);
+    });
+  }
+
+  private skillTargetPreview(state: GameState, layout: Layout, nowMs: number): void {
+    const lineClearReady = state.skillStatuses().some((skill) => skill.id === 'line_clearer' && skill.ready);
+    if (!lineClearReady) return;
+    const y = layout.boardY + layout.cell * 19 + layout.cell / 2;
+    const pulse = 0.18 + Math.sin(nowMs / 100) * 0.08;
+    const preview = this.scene.add.rectangle(layout.boardX + layout.cell * 5, y, layout.cell * 10, Math.max(6, layout.cell * 0.48), 0xffde59, pulse)
+      .setStrokeStyle(2, 0xffde59, 0.58);
+    this.cards.push(this.scene.add.container(0, 0, [preview]));
+  }
+
   private restartButton(x: number, y: number): void {
     this.retryBounds = new Phaser.Geom.Rectangle(x, y - 28, 180, 56);
     const bg = this.scene.add.rectangle(x + 90, y, 180, 56, 0x9befff, 1)
@@ -413,7 +516,7 @@ export class HudRenderer {
   private toast(message: string): void {
     const { width, height } = this.scene.scale;
     const displayWidth = this.viewportWidth();
-    const compact = displayWidth < 520;
+    const compact = displayWidth <= 520;
     const toast = createToastLayout(displayWidth, height, compact);
     const lineCount = Math.max(1, Math.ceil(message.length / Math.max(8, Math.floor(toast.textWidth / 16))));
     const toastH = Math.max(46, 28 + lineCount * 20);
