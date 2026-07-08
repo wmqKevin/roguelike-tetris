@@ -4,7 +4,55 @@ Release date: 2026-07-08
 Platform: Web
 Deployment URL: https://wmqkevin.github.io/roguelike-tetris/
 
-## v0.6.0 Draft
+## v0.7.0 Release
+
+v0.7.0 focuses on making the first roguelike power spike safer and clearer,
+especially for new players and low-height landscape viewports.
+
+### Release Scope
+
+- P0: First reward selection now opens a 1.5 second safety demonstration window
+  that freezes gravity/input, plays the reward-specific sample, and prevents
+  immediate Game Over from covering the power-up moment.
+- P0: Stage 1-2 now run on a slower effective gravity interval, and the first
+  12 locked pieces can trigger one visible top-danger rescue that clears the
+  lowest row.
+- P1: 520x390 landscape uses compact two-column readability: board fixed left,
+  reward cards summarized to the right, and terminal panels remain two-column.
+- P1: UPGRADES and terminal copy now include current build tendency,
+  recommended next reward, and next-run build advice.
+- P1: First reward, Tetris four-line clears, and skill releases now have
+  distinct peak feedback layers.
+- P2: Audio/BGM manual mix review and codex/badge entry strengthening are
+  deferred to v0.8 or a later polish pass.
+
+### Verification
+
+- `npm install`: required before release verification; expected 0
+  vulnerabilities.
+- `npm audit --audit-level=high`: required before deployment and expected to
+  report 0 high/critical vulnerabilities.
+- `npm test`: required to pass 5 files / 37 tests.
+- `npm run build`: required to produce the production bundle; Vite is still
+  expected to report the Phaser bundle-size warning.
+- QA Stage 2 accepted Chrome viewport evidence for 390x844 portrait,
+  520x390 landscape, and 960x720 desktop with no P0/P1 blockers.
+- GitHub Pages HTTP smoke: root page and the new hashed JavaScript asset must
+  return 200 after deployment; the superseded v0.6 JavaScript asset should
+  return 404 after cleanup.
+
+### Known Risks
+
+- The main JavaScript chunk still exceeds Vite's 500 kB warning threshold
+  because Phaser is bundled with the game.
+- P2 audio mix and codex/badge entry polish are intentionally deferred.
+
+### Rollback Plan
+
+- To roll back to v0.6.0, restore `gh-pages` deploy commit `92902c2d`.
+- To roll back to v0.5.0, restore `gh-pages` deploy commit `4dd60ce4`.
+
+## v0.6.0 Release
 
 v0.6.0 focuses on making upgrade feedback feel immediate while tightening the
 portrait HUD.
@@ -28,7 +76,7 @@ portrait HUD.
 ### Verification
 
 - `npm install`: completed with 0 vulnerabilities.
-- `npm test`: 5 files / 28 tests passed.
+- `npm test`: 5 files / 31 tests passed.
 - `npm run build`: passed; Vite still reports the expected Phaser bundle-size
   warning.
 - `npm audit --audit-level=high`: 0 vulnerabilities.
