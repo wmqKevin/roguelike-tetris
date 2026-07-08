@@ -21,10 +21,15 @@ export type GameEvent =
   | { type: 'rewardReady'; options: UpgradeConfig[] }
   | { type: 'upgradeFeedback'; message: string; goal: string }
   | { type: 'trialFeedback'; message: string }
+  | { type: 'dangerRescue'; message: string }
+  | { type: 'safetyWindow'; message: string; durationMs: number }
   | { type: 'stageStart'; stage: number }
   | { type: 'gameOver' }
   | { type: 'special'; kind: CellKind }
   | { type: 'skill'; id: string };
+
+export const FIRST_REWARD_SAFETY_MS = 1500;
+export const NEWCOMER_GRAVITY_MULTIPLIER = 1.25;
 
 export class GameState {
   board: Board;
@@ -47,6 +52,9 @@ export class GameState {
   lowPressurePiecesRemaining = 0;
   firstRewardTrialRemaining = 0;
   firstRewardTrialText = '';
+  firstRewardSafetyRemainingMs = 0;
+  newcomerRescueUsed = false;
+  dangerHintText = '';
   latestUpgradeGoal = '';
   noClearHardDrops = 0;
   centerPressureLocks = 0;
@@ -120,6 +128,21 @@ export class GameState {
     return this.ownedUpgrades.length > 0 ? '稳健成长' : '基础挑战';
   }
 
+  currentBuildGuidanceText(): string {
+    if (this.ownedUpgrades.length === 0) return '当前流派：未定型｜推荐下一奖：硬降收益 / Next 预览 / 技能清行';
+    return `当前流派：${this.runStyleLabel()}｜推荐下一奖：${this.recommendedNextRewardText()}`;
+  }
+
+  recommendedNextRewardText(): string {
+    const tags = new Set(this.ownedUpgrades.flatMap((upgrade) => upgrade.tags));
+    if (tags.has('skill')) return '补能量收益或防守续航，让技能更稳定释放';
+    if (tags.has('vision')) return '拿硬降收益或四消充能，把预判转成爆发';
+    if (tags.has('energy')) return '补 Next 预览或技能清行，减少高堆叠风险';
+    if (tags.has('tetris')) return '继续找长条呼叫 / Next 预览，放大四消峰值';
+    if (tags.has('defense')) return '补硬降收益，利用低压窗口滚雪球';
+    return '优先拿硬降收益 / Next 预览 / 技能清行';
+  }
+
   nextRunGoalText(): string {
     if (this.phase === 'victory') return '挑战更高分数';
     return `进入 Stage ${Math.min(this.highestStageReached + 1, STAGES.length)}`;
@@ -134,10 +157,25 @@ export class GameState {
     return '优先清右侧井口，保留一格直井';
   }
 
+  nextRunBuildAdviceText(): string {
+    if (this.phase === 'victory') return '下局构筑：延续四消爆发，补技能或防守提高上限';
+    const label = this.runStyleLabel();
+    if (label === '清场流') return '下局构筑：优先拿硬降收益或开局能量，保证技能释放频率';
+    if (label === '预判流') return '下局构筑：优先补 Tetris 充能或长条呼叫，把预判转成四消';
+    if (label === '硬降充能') return '下局构筑：优先补 Next 预览或清行技能，避免能量满但局面失控';
+    if (label === '四消爆发') return '下局构筑：优先拿 Next 预览 / 长条呼叫，稳定保井口';
+    if (this.centerPressureLocks >= 3) return '下局构筑：优先拿低压缓冲或清行技能，先压低中路';
+    return '下局构筑：优先拿硬降收益 / Next 预览 / 技能清行';
+  }
+
   step(deltaMs: number): void {
     if (this.phase !== 'playing') return;
+    if (this.firstRewardSafetyRemainingMs > 0) {
+      this.firstRewardSafetyRemainingMs = Math.max(0, this.firstRewardSafetyRemainingMs - deltaMs);
+      return;
+    }
     this.gravityElapsed += deltaMs;
-    const interval = gravityInterval(this.effectiveGravity());
+    const interval = this.effectiveGravityIntervalMs();
     while (this.gravityElapsed >= interval) {
       this.gravityElapsed -= interval;
       this.softDrop(false);
@@ -150,6 +188,7 @@ export class GameState {
       return;
     }
     if (this.phase !== 'playing') return;
+    if (this.firstRewardSafetyRemainingMs > 0) return;
     if (command === 'MoveLeft') this.tryMove(-1, 0);
     if (command === 'MoveRight') this.tryMove(1, 0);
     if (command === 'SoftDrop') this.softDrop(true);
@@ -182,6 +221,10 @@ export class GameState {
     this.startStage(this.stageIndex);
     if (isFirstReward) this.startFirstRewardTrial(upgrade);
     this.phase = 'playing';
+    if (isFirstReward) {
+      this.firstRewardSafetyRemainingMs = FIRST_REWARD_SAFETY_MS;
+      this.events.push({ type: 'safetyWindow', message: '安全演示 1.5 秒：奖励已生效，危险暂停', durationMs: FIRST_REWARD_SAFETY_MS });
+    }
     this.spawn(this.demoPieceFor(upgrade));
   }
 
@@ -194,6 +237,9 @@ export class GameState {
     this.active = { type, x: 3, y: 0, rotation: 0, special: this.nextSpecialKind() };
     this.canHold = true;
     this.lockDelay.fresh();
+    if (this.board.collides(this.active)) {
+      if (this.firstRewardSafetyRemainingMs > 0) this.makeRoomForSafetySpawn();
+    }
     if (this.board.collides(this.active)) {
       this.phase = 'game_over';
       this.events.push({ type: 'gameOver' });
@@ -213,7 +259,7 @@ export class GameState {
       if (manual) this.addEnergy(BALANCE.softDropEnergyPerCell);
       return;
     }
-    if (this.lockDelay.step(manual ? 500 : gravityInterval(this.effectiveGravity()))) {
+    if (this.lockDelay.step(manual ? 500 : this.effectiveGravityIntervalMs())) {
       this.lockActive();
     }
   }
@@ -276,6 +322,7 @@ export class GameState {
     if (result.cleared > 0) this.noClearHardDrops = 0;
     if (lockedCells.some((cell) => cell.x >= 4 && cell.x <= 5 && cell.y >= 0 && cell.y <= 9)) this.centerPressureLocks += 1;
     if (this.isRightWellBlocked()) this.rightWellBlockedLocks += 1;
+    this.tryNewcomerDangerRescue();
     if (special && special !== 'normal') this.events.push({ type: 'special', kind: special });
     this.events.push({ type: 'lock', hardDrop });
     this.checkStageComplete();
@@ -307,6 +354,11 @@ export class GameState {
     const stage = this.currentStage();
     const pressureRelief = this.lowPressurePiecesRemaining > 0 ? 1 : 0;
     return Math.max(1, Math.min(10, stage.gravityLevel + (stage.affixes.includes('accelerating_storm') ? 1 : 0) - pressureRelief));
+  }
+
+  effectiveGravityIntervalMs(): number {
+    const base = gravityInterval(this.effectiveGravity());
+    return this.stageIndex <= 1 ? Math.round(base * NEWCOMER_GRAVITY_MULTIPLIER) : base;
   }
 
   private addEnergy(amount: number): void {
@@ -386,6 +438,27 @@ export class GameState {
     if (upgrade.effect === 'preview_plus') this.bag.forceNext('I');
     this.latestUpgradeGoal = this.firstRewardTrialText;
     this.events.push({ type: 'trialFeedback', message: this.firstRewardTrialText });
+  }
+
+  private tryNewcomerDangerRescue(): void {
+    if (this.newcomerRescueUsed || !this.hasFirstRewardSafetyNet() || this.piecesLocked > 12) return;
+    if (this.board.highestVisibleRow() > 6) return;
+    this.board.clearLowestVisibleRow();
+    this.newcomerRescueUsed = true;
+    this.dangerHintText = '顶部危险：已触发新手救场，自动清理最低一行';
+    this.events.push({ type: 'dangerRescue', message: this.dangerHintText });
+  }
+
+  private makeRoomForSafetySpawn(): void {
+    let cleared = 0;
+    while (this.board.collides(this.active) && cleared < 4) {
+      this.board.clearLowestVisibleRow();
+      cleared += 1;
+    }
+    if (cleared > 0) {
+      this.dangerHintText = '首奖安全演示：已清理底部空间，避免奖励被失败覆盖';
+      this.events.push({ type: 'dangerRescue', message: this.dangerHintText });
+    }
   }
 
   private trialTextFor(upgrade: UpgradeConfig): string {
