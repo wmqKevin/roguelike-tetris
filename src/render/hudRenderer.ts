@@ -12,6 +12,11 @@ export type HudUiState = {
   highlightUntilMs: number;
   showTutorial: boolean;
   usedTutorialActions: ReadonlySet<TutorialAction>;
+  codex?: {
+    upgrades: string[];
+    stageBadges: number[];
+    bestRunStyle: string;
+  };
 };
 
 export class HudRenderer {
@@ -38,10 +43,10 @@ export class HudRenderer {
 
     if (state.phase === 'reward') this.rewardCards(state, layout);
     if (state.phase === 'paused') this.centerPanel('PAUSED', ['P / Esc 继续', 'R 重开']);
-    if (state.phase === 'game_over') this.gameOverPanel(state);
-    if (state.phase === 'victory') this.gameOverPanel(state, 'BREACH CLEARED');
+    if (state.phase === 'game_over') this.gameOverPanel(state, ui.codex);
+    if (state.phase === 'victory') this.gameOverPanel(state, ui.codex, 'BREACH CLEARED');
     if (ui.toast && ui.nowMs < ui.toast.untilMs) this.toast(ui.toast.message);
-    if (ui.showTutorial) this.tutorialHints(layout, ui.usedTutorialActions);
+    if (ui.showTutorial && !layout.portrait) this.tutorialHints(layout, ui.usedTutorialActions);
   }
 
   private wideHud(state: GameState, layout: Layout, highScore: number, ui: HudUiState): void {
@@ -78,29 +83,38 @@ export class HudRenderer {
     this.text(14, topY + 24, `目标 ${state.linesInStage}/${state.linesUntilReward() + state.linesInStage}`, 16, highlight ? '#ffde59' : '#d7f7ff');
     this.text(136, topY + 24, `能量 ${Math.floor(state.energy)}/200`, 16, highlight || 200 - state.energy <= 20 ? '#ffde59' : '#ffffff');
     this.energyBar(Math.max(206, this.scene.scale.width - 184), topY + 34, state.energy / 200, ui.nowMs);
-    this.label(14, layout.boardY - 32, 'HOLD');
-    if (state.hold) this.boardRenderer.drawMiniPiece(state.hold, 70, layout.boardY - 18, 12);
-    this.label(layout.boardX + layout.cell * 10 - 118, layout.boardY - 32, 'NEXT');
+    const trayY = layout.portrait ? Math.min(this.scene.scale.height - 68, layout.boardY + layout.cell * 20 + 24) : layout.boardY - 32;
+    this.label(14, trayY, 'HOLD');
+    if (state.hold) this.boardRenderer.drawMiniPiece(state.hold, 70, trayY + 14, 12);
+    this.label(layout.boardX + layout.cell * 10 - 118, trayY, 'NEXT');
     state.preview().slice(0, 2).forEach((piece: PieceType, index) => {
-      this.boardRenderer.drawMiniPiece(piece, layout.boardX + layout.cell * 10 - 58 + index * 48, layout.boardY - 18, 12, 0.9);
+      this.boardRenderer.drawMiniPiece(piece, layout.boardX + layout.cell * 10 - 58 + index * 48, trayY + 14, 12, 0.9);
     });
-    if (state.lowPressurePiecesRemaining > 0) this.text(14, 62, `低压缓冲 ${state.lowPressurePiecesRemaining} 块`, 15, '#ffde59');
-    else if (state.latestUpgradeGoal) this.text(14, 62, state.latestUpgradeGoal, 15, '#9befff').setWordWrapWidth(360);
+    const goalY = layout.portrait ? this.scene.scale.height - 30 : 62;
+    if (state.firstRewardTrialRemaining > 0) this.text(14, goalY, `${state.firstRewardTrialText}（剩 ${state.firstRewardTrialRemaining}）`, 14, '#ffde59').setWordWrapWidth(this.scene.scale.width - 28);
+    else if (state.lowPressurePiecesRemaining > 0) this.text(14, goalY, `低压缓冲 ${state.lowPressurePiecesRemaining} 块`, 15, '#ffde59');
+    else if (state.latestUpgradeGoal) this.text(14, goalY, state.latestUpgradeGoal, 15, '#9befff').setWordWrapWidth(360);
   }
 
   private rewardCards(state: GameState, layout: Layout): void {
-    const startX = layout.boardX - 170;
+    const narrow = layout.compactHud;
+    const cardW = narrow ? Math.max(112, Math.floor((this.scene.scale.width - 34) / 3)) : 200;
+    const cardH = narrow ? 214 : 230;
+    const gap = narrow ? 7 : 20;
+    const startX = narrow ? 12 + cardW / 2 : layout.boardX - 170;
     state.rewardOptions.forEach((upgrade, index) => {
-      const x = startX + index * 220;
-      const y = layout.boardY + 150;
+      const x = startX + index * (cardW + gap);
+      const y = narrow ? Math.max(190, layout.boardY + 98) : layout.boardY + 150;
       const card = this.scene.add.container(x, y);
-      const bg = this.scene.add.rectangle(0, 0, 200, 230, 0x111a32, 0.96).setStrokeStyle(2, 0x00e5ff, 0.8);
-      const title = this.scene.add.text(-82, -92, `${index + 1}. ${upgrade.name}`, { fontSize: '18px', color: '#ffffff', fontStyle: '700', wordWrap: { width: 164 } });
-      const rarity = this.scene.add.text(-82, -44, upgrade.rarity.toUpperCase(), { fontSize: '13px', color: '#ffde59' });
-      const body = this.scene.add.text(-82, -14, upgrade.description, { fontSize: '15px', color: '#d7f7ff', wordWrap: { width: 164 } });
-      const hint = this.scene.add.text(-82, 82, '按 1/2/3 或点击选择', { fontSize: '13px', color: '#9befff' });
-      card.add([bg, title, rarity, body, hint]);
-      card.setSize(200, 230).setInteractive({ useHandCursor: true });
+      const bg = this.scene.add.rectangle(0, 0, cardW, cardH, 0x111a32, 0.96).setStrokeStyle(2, 0x00e5ff, 0.8);
+      const textW = cardW - 24;
+      const title = this.scene.add.text(-textW / 2, -cardH / 2 + 18, `${index + 1}. ${upgrade.name}`, { fontSize: narrow ? '15px' : '18px', color: '#ffffff', fontStyle: '700', wordWrap: { width: textW } });
+      const rarity = this.scene.add.text(-textW / 2, -cardH / 2 + 64, upgrade.rarity.toUpperCase(), { fontSize: '12px', color: '#ffde59' });
+      const body = this.scene.add.text(-textW / 2, -cardH / 2 + 91, upgrade.description, { fontSize: narrow ? '13px' : '15px', color: '#d7f7ff', wordWrap: { width: textW } });
+      const demo = this.scene.add.text(-textW / 2, cardH / 2 - 58, this.rewardDemoCopy(upgrade.effect), { fontSize: narrow ? '12px' : '13px', color: '#ffde59', wordWrap: { width: textW } });
+      const hint = this.scene.add.text(-textW / 2, cardH / 2 - 25, '1/2/3 或点击', { fontSize: '12px', color: '#9befff' });
+      card.add([bg, title, rarity, body, demo, hint]);
+      card.setSize(cardW, cardH).setInteractive({ useHandCursor: true });
       card.on('pointerover', () => {
         bg.setStrokeStyle(3, 0xffde59, 1);
         card.setScale(1.04);
@@ -125,7 +139,7 @@ export class HudRenderer {
     const parts = [`再消除 ${remaining} 行`, `攒满能量 ${Math.ceil(energy)}`];
     if (Number.isFinite(pieces)) parts.push(`落 ${pieces} 块`);
     const goal = remaining > 0 || energy > 0 || pieces > 0 ? `目标：${parts.join(' / ')} 即可选择强化` : '目标：选择强化继续推进';
-    if (layout.compactHud) this.text(14, 86, goal, 15, color).setWordWrapWidth(Math.max(260, this.scene.scale.width - 28));
+    if (layout.compactHud) this.text(14, layout.portrait ? 58 : 86, goal, 15, color).setWordWrapWidth(Math.max(260, this.scene.scale.width - 28));
     else this.text(layout.boardX, layout.boardY - 44, goal, 20, color);
   }
 
@@ -151,22 +165,32 @@ export class HudRenderer {
     lines.forEach((line, index) => this.text(width / 2 - 150, height / 2 + index * 34, line, 20, '#d7f7ff'));
   }
 
-  private gameOverPanel(state: GameState, title = 'GAME OVER'): void {
+  private gameOverPanel(state: GameState, codex?: HudUiState['codex'], title = 'GAME OVER'): void {
     const { width, height } = this.scene.scale;
     const panelW = Math.min(500, width - 28);
-    const box = this.scene.add.rectangle(width / 2, height / 2, panelW, 378, 0x080d1d, 0.94).setStrokeStyle(2, 0xff2bd6, 0.9);
+    const box = this.scene.add.rectangle(width / 2, height / 2, panelW, 430, 0x080d1d, 0.94).setStrokeStyle(2, 0xff2bd6, 0.9);
     this.cards.push(this.scene.add.container(0, 0, [box]));
     const left = width / 2 - panelW / 2 + 40;
-    this.text(left, height / 2 - 152, title, width <= 520 ? 30 : 36, '#ffffff');
-    this.text(left, height / 2 - 106, `Score ${state.score}`, 22, '#d7f7ff');
-    this.text(left, height / 2 - 72, `本局流派：${state.runStyleLabel()}`, 18, '#d7f7ff');
-    this.text(left, height / 2 - 42, `最高阶段：Stage ${state.highestStageReached}/8`, 18, '#d7f7ff');
-    this.text(left, height / 2 - 12, `下次目标：${state.nextRunGoalText()}`, 18, '#ffde59');
-    this.text(left, height / 2 + 18, state.gameOverProgressText(), 18, '#ffde59');
+    this.text(left, height / 2 - 180, title, width <= 520 ? 30 : 36, '#ffffff');
+    this.text(left, height / 2 - 136, `Score ${state.score}`, 22, '#d7f7ff');
+    this.text(left, height / 2 - 104, `失败原因：${state.failureReasonText()}`, 17, '#ffde59');
+    this.text(left, height / 2 - 76, `本局最佳表现：${state.bestPerformanceText()}`, 17, '#d7f7ff').setWordWrapWidth(panelW - 80);
+    this.text(left, height / 2 - 46, `本局流派：${state.runStyleLabel()}`, 18, '#d7f7ff');
+    this.text(left, height / 2 - 18, `下次目标：${state.nextRunGoalText()}`, 18, '#ffde59');
+    this.text(left, height / 2 + 10, state.gameOverProgressText(), 18, '#ffde59');
     const upgrades = state.ownedUpgrades.length > 0 ? state.ownedUpgrades.map((upgrade) => upgrade.name).join(' / ') : '无';
-    this.text(left, height / 2 + 48, `本局强化：${upgrades}`, 16, '#d7f7ff').setWordWrapWidth(panelW - 80);
-    this.restartButton(left, height / 2 + 122);
-    this.text(left + 156, height / 2 + 112, 'Space / R', 18, '#9befff');
+    this.text(left, height / 2 + 40, `本局强化：${upgrades}`, 16, '#d7f7ff').setWordWrapWidth(panelW - 80);
+    const codexText = codex ? `图鉴 ${codex.upgrades.length}/12｜最高徽章 Stage ${Math.max(0, ...codex.stageBadges)}｜最佳流派 ${codex.bestRunStyle}` : '图鉴 0/12｜最高徽章 Stage 0';
+    this.text(left, height / 2 + 92, codexText, 15, '#9befff').setWordWrapWidth(panelW - 80);
+    this.restartButton(left, height / 2 + 152);
+    this.text(left + 156, height / 2 + 142, 'Space / R', 18, '#9befff');
+  }
+
+  private rewardDemoCopy(effect: string): string {
+    if (effect === 'hard_drop_energy') return '演示：送高落差 I 块';
+    if (effect === 'preview_plus') return '演示：新增 Next 高亮';
+    if (effect === 'line_clear_skill' || effect === 'i_call_skill') return '演示：补贴一次技能';
+    return '试用期 4 块';
   }
 
   private restartButton(x: number, y: number): void {
