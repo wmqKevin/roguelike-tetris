@@ -6,7 +6,7 @@ Date: 2026-07-07
 
 ## Scope
 
-MVP scope is the leader-approved cut: desktop keyboard first, first 6-8 stages, no full T-Spin, no touch controls, no BGM, no permanent meta progression.
+MVP scope is the leader-approved cut: desktop keyboard first, first 6-8 stages, no full T-Spin, no touch controls, no permanent meta progression. v0.6 adds portrait toast fixes, first-reward demonstration feedback, synthesized BGM/SFX layering, and terminal next-run advice.
 
 ## Test Cases
 
@@ -32,14 +32,20 @@ MVP scope is the leader-approved cut: desktop keyboard first, first 6-8 stages, 
 | TC-018 | F11 feedback | P0 | Inspect effects and tests | Flash, particles, and shake exist; Tetris intensity > single-line; reduced motion lowers particles/shake | PASS |
 | TC-019 | F12 save | P0 | Inspect localStorage save path | High score/best stage persist via `localStorage` | PASS |
 | TC-020 | F13 pause | P0 | Inspect pause phase and step guard | `step()` returns while paused; P/Esc toggles pause | PASS |
-| TC-021 | Audio SFX | P0 | Inspect event hooks | line clear/reward/hard drop/game over SFX paths exist; BGM stubs reserved | PASS |
+| TC-021 | Audio SFX | P0 | Inspect event hooks | hard drop, 1/2/3/4 line clear, reward, skill, and game-over SFX paths exist; Web Audio absence is safe | PASS |
 | TC-022 | Responsive layout | P1 | Inspect 1280x720 and small viewport layout math | Desktop target is covered; mobile/touch remains deferred | PASS with scope note |
 | TC-023 | Bundle size | P0 | Inspect production bundle size | `dist` 1.5 MB raw; main JS 344.52 KB gzip, under 5 MB gzip budget | PASS |
-| TC-024 | Security audit | P1 | Run `npm audit --json` | No high/critical unresolved vulnerabilities before release | FAIL |
-| TC-025 | Reward card mouse UX | P2 | Inspect reward card UI | Cards render but have no pointer/click handler; keyboard 1/2/3 works | FAIL non-blocking |
+| TC-024 | Security audit | P1 | Run `npm audit --audit-level=high` | No high/critical unresolved vulnerabilities before release | PASS |
+| TC-025 | Reward card mouse UX | P2 | Inspect reward card UI | Cards render with pointer/click handler; keyboard 1/2/3 works | PASS |
+| TC-026 | Portrait toast | P0 | Unit-test compact toast geometry at 390px | Toast width is viewport - 28, centered, and text wrap width is inset | PASS |
+| TC-027 | First reward demo | P1 | Unit-test first reward skill demo effect | Demo creates flash/pulse/fly-text feedback within the reward path | PASS |
+| TC-028 | Terminal advice | P1 | Unit-test failure pattern advice | Center stack, right well, and no-clear hard-drop patterns map to targeted advice | PASS |
+| TC-029 | BGM fallback | P1 | Unit-test `AudioManager` without Web Audio | SFX/music calls no-op without throwing | PASS |
+| TC-030 | Real Chrome portrait | P0 | Headless Google Chrome 390x844 screenshot | Board renders, target is split into two rows, no app asset 404 seen in output | PASS with note |
+| TC-031 | Real Chrome desktop | P0 | Headless Google Chrome 960x720 screenshot | Desktop side HUD and board render without layout regression | PASS |
 
 ## Environment
 
 - Node/npm environment in Multica runtime
-- Dev server: Vite on `127.0.0.1:5176`
-- Browser automation: not available in this runtime; HTTP smoke and source-level compatibility checks were used instead
+- Dev server: Vite on `127.0.0.1:4173`
+- Browser automation: Google Chrome headless screenshots are available; interactive reward/toast playthrough automation is not available in this runtime, so toast behavior is covered by unit geometry tests plus visual smoke screenshots.
