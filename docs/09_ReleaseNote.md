@@ -4,6 +4,38 @@ Release date: 2026-07-08
 Platform: Web
 Deployment URL: https://wmqkevin.github.io/roguelike-tetris/
 
+## v0.6.0 Draft
+
+v0.6.0 focuses on making upgrade feedback feel immediate while tightening the
+portrait HUD.
+
+### Release Scope
+
+- P0: Portrait toast now uses viewport width minus 28px, stays centered, and
+  wraps text; compact objective copy is split into a main row and rotating
+  secondary row.
+- P1: First reward selection triggers a short forced demo: hard-drop energy fly
+  text, Next highlight, or skill-ready flash/pulse depending on reward type.
+- P1: Feedback has stronger synthesized audio and visual layering for hard
+  drop, 1/2/3/4 line clears, reward select, skill release, and Game Over. BGM is
+  a generated Web Audio loop, so no external audio license is required.
+- P1: Terminal panel now adds targeted next-run advice and highlights codex /
+  highest-stage badge progress.
+- Cleanup: No repository favicon or stale asset reference was found; headless
+  Chrome output showed only environment Chrome/DBus/cache messages, not app
+  asset 404s.
+
+### Verification
+
+- `npm install`: completed with 0 vulnerabilities.
+- `npm test`: 5 files / 28 tests passed.
+- `npm run build`: passed; Vite still reports the expected Phaser bundle-size
+  warning.
+- `npm audit --audit-level=high`: 0 vulnerabilities.
+- Real Chrome smoke: 390x844 portrait and 960x720 desktop screenshots render
+  correctly. Interactive reward/toast browser automation is not available in
+  this runtime; portrait toast geometry is covered by unit tests.
+
 ## v0.5.0 Release
 
 v0.5.0 focuses on phone-first playability and making the first roguelike reward
