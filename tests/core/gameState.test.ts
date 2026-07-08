@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Board } from '../../src/core/board';
 import { SevenBag } from '../../src/core/bag';
-import { FIRST_REWARD_SAFETY_MS, GameState, findUpgrade } from '../../src/core/gameState';
+import { FIRST_REWARD_SAFETY_MS, FIRST_REWARD_TRIAL_MS, GameState, findUpgrade } from '../../src/core/gameState';
 import { createRng } from '../../src/core/rng';
 import { tryRotate } from '../../src/core/srs';
 import { getCells } from '../../src/core/tetrominoes';
@@ -117,7 +117,8 @@ describe('GameState', () => {
     state.step(FIRST_REWARD_SAFETY_MS);
     state.command('HardDrop');
     expect(state.lowPressurePiecesRemaining).toBe(3);
-    expect(state.firstRewardTrialRemaining).toBe(3);
+    expect(state.firstRewardTrialRemaining).toBe(0);
+    expect(state.events).toContainEqual({ type: 'trialFeedback', message: '试用完成：完成高落差硬降，+20 能量 / +120 分' });
   });
 
   it('freezes gravity during the first reward safety demo window', () => {
@@ -167,9 +168,10 @@ describe('GameState', () => {
 
     state.selectReward(0);
 
-    expect(state.events).toContainEqual({ type: 'upgradeFeedback', message: 'Next +1', goal: '试用期 4 块：新增 Next 高亮 / 无垃圾 / 触发强化目标' });
-    expect(state.events).toContainEqual({ type: 'trialFeedback', message: '试用期 4 块：新增 Next 高亮 / 无垃圾 / 触发强化目标' });
-    expect(state.latestUpgradeGoal).toBe('试用期 4 块：新增 Next 高亮 / 无垃圾 / 触发强化目标');
+    expect(state.events).toContainEqual({ type: 'upgradeFeedback', message: 'Next +1', goal: '10 秒试用：看 Next 完成一次推荐落位，完成给 +20 能量 / +120 分' });
+    expect(state.events).toContainEqual({ type: 'trialFeedback', message: '10 秒试用：看 Next 完成一次推荐落位，完成给 +20 能量 / +120 分' });
+    expect(state.latestUpgradeGoal).toBe('10 秒试用：看 Next 完成一次推荐落位，完成给 +20 能量 / +120 分');
+    expect(state.firstRewardTrialRemainingMs).toBe(FIRST_REWARD_TRIAL_MS);
   });
 
   it('gives first skill rewards a free trial cast', () => {
@@ -182,7 +184,77 @@ describe('GameState', () => {
     expect(state.energy).toBe(100);
     state.step(FIRST_REWARD_SAFETY_MS);
     state.command('Skill1');
+    expect(state.events).toContainEqual({ type: 'skillFeedback', id: 'line_clearer', message: 'C 释放最低行清除', success: true });
     expect(state.events).toContainEqual({ type: 'trialFeedback', message: '试用触发：行清除器已清理底线' });
+    expect(state.events).toContainEqual({ type: 'trialFeedback', message: '试用完成：完成行清除器释放，+20 能量 / +120 分' });
+    expect(state.score).toBe(120);
+    expect(state.firstRewardTrialRemaining).toBe(0);
+  });
+
+  it('maps the third first reward line clearer to C and reports every C press state', () => {
+    const state = new GameState('first-reward-line-clearer-c');
+    state.phase = 'reward';
+    state.rewardOptions = [findUpgrade('precision_hard_drop'), findUpgrade('stable_preview'), findUpgrade('line_clearer')];
+
+    state.selectReward(2);
+
+    expect(state.modifiers.skills[0]).toBe('line_clearer');
+    expect(state.skillStatuses()[0]).toMatchObject({
+      id: 'line_clearer',
+      key: 'C',
+      ready: false,
+      reason: '安全演示中，稍后释放'
+    });
+
+    state.command('Skill1');
+    expect(state.energy).toBe(100);
+    expect(state.events).toContainEqual({ type: 'skillFeedback', id: 'line_clearer', message: '安全演示中，稍后释放', success: false });
+
+    state.step(FIRST_REWARD_SAFETY_MS);
+    expect(state.skillStatuses()[0]).toMatchObject({
+      id: 'line_clearer',
+      key: 'C',
+      ready: true,
+      action: 'C 释放最低行清除'
+    });
+
+    state.command('Skill1');
+    expect(state.energy).toBe(20);
+    expect(state.events).toContainEqual({ type: 'skillFeedback', id: 'line_clearer', message: 'C 释放最低行清除', success: true });
+
+    state.command('Skill1');
+    expect(state.events).toContainEqual({ type: 'skillFeedback', id: 'line_clearer', message: '能量不足 100', success: false });
+  });
+
+  it('expires the first reward safety guard by wall clock before C release', () => {
+    let nowMs = 1000;
+    const state = new GameState('first-reward-wall-clock-safety', () => nowMs);
+    state.phase = 'reward';
+    state.rewardOptions = [findUpgrade('precision_hard_drop'), findUpgrade('stable_preview'), findUpgrade('line_clearer')];
+
+    state.selectReward(2);
+    expect(state.skillStatuses()[0]).toMatchObject({ ready: false, reason: '安全演示中，稍后释放' });
+
+    nowMs += FIRST_REWARD_SAFETY_MS + 1;
+
+    expect(state.skillStatuses()[0]).toMatchObject({ ready: true, reason: 'C 释放最低行清除' });
+    state.command('Skill1');
+    expect(state.events).toContainEqual({ type: 'skillFeedback', id: 'line_clearer', message: 'C 释放最低行清除', success: true });
+    expect(state.energy).toBe(20);
+  });
+
+  it('reports skill readiness and failure reasons', () => {
+    const state = new GameState('skill-feedback');
+    state.modifiers.skills = ['line_clearer'];
+
+    expect(state.skillStatuses()[0]).toMatchObject({ id: 'line_clearer', key: 'C', ready: false, reason: '能量不足 100' });
+    state.command('Skill1');
+    expect(state.events).toContainEqual({ type: 'skillFeedback', id: 'line_clearer', message: '能量不足 100', success: false });
+
+    state.energy = 100;
+    expect(state.skillStatuses()[0]).toMatchObject({ key: 'C', ready: true, action: 'C 释放最低行清除' });
+    state.command('Skill1');
+    expect(state.events).toContainEqual({ type: 'skillFeedback', id: 'line_clearer', message: 'C 释放最低行清除', success: true });
   });
 
   it('consumes full energy after an energy-triggered reward selection', () => {
