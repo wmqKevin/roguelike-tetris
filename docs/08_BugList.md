@@ -14,6 +14,8 @@ Date: 2026-07-07
 | BUG-004 | P1 | Development | Yes | Fixed for v0.2 hotfix |
 | BUG-005 | P1 | Development | Was Yes | 已修 - ZI-87 QA 复测通过 |
 | BUG-006 | P1 | Development | Was Yes | 已修 - ZI-87 QA 复测通过 |
+| BUG-007 | P1 | Development | Was Yes | Fixed for v0.5 |
+| BUG-008 | P1 | Development | Was Yes | 已修 - ZI-92 QA 复测通过 |
 
 ## BUG-001 - npm audit reports high/critical vulnerabilities in dev toolchain
 
@@ -156,3 +158,56 @@ ZI-87返工版回归通过：
 ### Resolution
 
 Layout creation now receives the canvas displayed width and uses it for the compact HUD breakpoint instead of using the fixed Phaser logical width.
+
+## BUG-007 - Portrait mobile still uses fixed 16:9 stage fit
+
+Severity: P1
+Owner: Development
+Blocks release: Was Yes
+Status: Fixed for v0.5
+
+### Evidence
+
+v0.4 compact HUD could trigger at 390px, but the Phaser canvas still used a 1280x720 FIT stage. On portrait phones this kept the board visually small and centered with unused vertical space.
+
+### Resolution
+
+v0.5 switches narrow portrait launches to a viewport-sized Phaser canvas and portrait layout math. The board cell size now uses the available phone width/height directly, with HOLD/NEXT moved to the bottom tray and goal text kept at the top/bottom bands. The >=520px desktop/landscape path keeps the existing 1280x720 FIT behavior.
+
+### Regression
+
+Added layout coverage for 390x844 portrait sizing and retained the compact HUD breakpoint checks for 390px vs 520px.
+
+## BUG-008 - Codex localStorage write failure can crash terminal run recording
+
+Severity: P1
+Owner: Development
+Blocks release: Was Yes
+Status: 已修 - ZI-92 QA 复测通过
+
+### Evidence
+
+ZI-92 first QA pass found that v0.5 codex / badge / best-run-style persistence called `localStorage.setItem()` without a write-failure fallback. In browsers where storage writes are disabled or quota-blocked, Game Over / Victory could throw during `recordRunOnce()`.
+
+Original reproduction:
+
+```text
+globalThis.localStorage = {
+  getItem() { return null },
+  setItem() { throw new Error('quota') }
+}
+recordRun(100, 2, ['stable_preview'], '清场流') => THREW: quota
+```
+
+### Resolution
+
+ZI-96 wraps `save()` writes in try/catch. Write failure now logs a warning and does not interrupt Game Over / Victory. `recordRun()` still returns the in-memory save state with high score, best stage, codex upgrades, stage badge, and best run style populated.
+
+### Regression
+
+ZI-92 hotfix retest passed:
+
+- `npm test`: 4 files / 23 tests passed, including storage write-failure coverage.
+- Independent mocked reproduction now returns `{"highScore":100,"bestStage":2,"upgrades":["stable_preview"],"badges":[2],"style":"清场流"}` without throwing.
+- `npm run build` passed.
+- `npm audit --audit-level=high` found 0 vulnerabilities.
