@@ -45,11 +45,33 @@ export class Effects {
     this.flash(0xff2bd6, 0.24, 210);
   }
 
-  skillPeak(): void {
-    if (!this.reducedMotion) this.scene.cameras.main.shake(170, 0.006);
-    this.flash(0x00e5ff, 0.24, 240);
-    this.particleRing(this.scene.scale.width / 2, this.scene.scale.height * 0.48, 0x00e5ff, this.reducedMotion ? 6 : 34, 190);
-    this.floatingText('技能释放', this.scene.scale.width / 2, this.scene.scale.height * 0.38, '#9befff');
+  skillPeak(message = '技能释放'): void {
+    if (!this.reducedMotion) this.scene.cameras.main.shake(260, 0.009);
+    this.flash(0x00e5ff, 0.3, 280);
+    this.particleRing(this.scene.scale.width / 2, this.scene.scale.height * 0.48, 0x00e5ff, this.reducedMotion ? 8 : 46, 210);
+    this.floatingText(message, this.scene.scale.width / 2, this.scene.scale.height * 0.38, '#ffde59', 1000);
+  }
+
+  bottomRowSweep(layout: Layout): void {
+    const y = layout.boardY + layout.cell * 19 + layout.cell / 2;
+    const width = layout.cell * 10;
+    const beam = this.scene.add.rectangle(layout.boardX, y, Math.max(18, layout.cell * 1.3), Math.max(8, layout.cell * 0.54), 0xffde59, 0.82)
+      .setOrigin(0, 0.5);
+    const glow = this.scene.add.rectangle(layout.boardX + width / 2, y, width, Math.max(10, layout.cell * 0.72), 0x00e5ff, 0.16);
+    this.scene.tweens.add({
+      targets: beam,
+      x: layout.boardX + width,
+      alpha: 0,
+      duration: this.reducedMotion ? 180 : 520,
+      ease: 'Cubic.easeOut',
+      onComplete: () => beam.destroy()
+    });
+    this.scene.tweens.add({
+      targets: glow,
+      alpha: 0,
+      duration: this.reducedMotion ? 180 : 680,
+      onComplete: () => glow.destroy()
+    });
   }
 
   hardDropImpact(x: number, y: number, radius: number): void {
@@ -98,7 +120,7 @@ export class Effects {
     this.flash(0xff2bd6, 0.22, 380);
   }
 
-  floatingText(message: string, x: number, y: number, color = '#ffde59'): void {
+  floatingText(message: string, x: number, y: number, color = '#ffde59', duration = 760): void {
     const label = this.scene.add.text(x, y, message, {
       fontFamily: 'Inter, Arial, sans-serif',
       fontSize: '22px',
@@ -109,7 +131,7 @@ export class Effects {
       targets: label,
       y: y - 42,
       alpha: 0,
-      duration: this.reducedMotion ? 420 : 760,
+      duration: this.reducedMotion ? Math.min(420, duration) : duration,
       onComplete: () => label.destroy()
     });
   }
