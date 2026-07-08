@@ -28,7 +28,10 @@ export type InputCommand =
   | 'Pause'
   | 'Skill1'
   | 'Skill2'
-  | 'Skill3';
+  | 'Skill3'
+  | 'Reward1'
+  | 'Reward2'
+  | 'Reward3';
 
 export type LineClearResult = {
   lines: number[];
