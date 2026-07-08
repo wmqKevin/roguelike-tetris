@@ -118,7 +118,7 @@ describe('GameState', () => {
     state.command('HardDrop');
     expect(state.lowPressurePiecesRemaining).toBe(3);
     expect(state.firstRewardTrialRemaining).toBe(0);
-    expect(state.events).toContainEqual({ type: 'trialFeedback', message: '试用完成：完成高落差硬降，+20 能量 / +120 分' });
+    expect(state.events).toContainEqual({ type: 'trialFeedback', message: '试用完成：完成高落差硬降，+20 能量 / 徽章进度 +1', reward: { energy: 20, badgeProgress: 1 } });
   });
 
   it('freezes gravity during the first reward safety demo window', () => {
@@ -182,13 +182,21 @@ describe('GameState', () => {
     state.selectReward(0);
 
     expect(state.energy).toBe(100);
-    state.step(FIRST_REWARD_SAFETY_MS);
+    state.step(FIRST_REWARD_SAFETY_MS * 2);
+    expect(state.firstRewardSafetyRemainingMs).toBeGreaterThan(0);
     state.command('Skill1');
-    expect(state.events).toContainEqual({ type: 'skillFeedback', id: 'line_clearer', message: 'C 释放最低行清除', success: true });
+    expect(state.events).toContainEqual({ type: 'skillFeedback', id: 'line_clearer', message: '行清除器发动', success: true, energySpent: 100 });
     expect(state.events).toContainEqual({ type: 'trialFeedback', message: '试用触发：行清除器已清理底线' });
-    expect(state.events).toContainEqual({ type: 'trialFeedback', message: '试用完成：完成行清除器释放，+20 能量 / +120 分' });
+    expect(state.events).toContainEqual({ type: 'trialFeedback', message: '试用完成：完成行清除器释放，+20 能量 / 徽章进度 +1', reward: { energy: 20, badgeProgress: 1 } });
     expect(state.score).toBe(120);
     expect(state.firstRewardTrialRemaining).toBe(0);
+    expect(state.firstRewardSafetyRemainingMs).toBe(0);
+  });
+
+  it('exposes opening long-term targets before the first reward', () => {
+    const state = new GameState('opening-goals');
+
+    expect(state.openingGoalText()).toBe('本局推荐流派：清场流｜可解锁徽章：Stage 2｜图鉴进度 0/12');
   });
 
   it('maps the third first reward line clearer to C and reports every C press state', () => {
@@ -202,25 +210,19 @@ describe('GameState', () => {
     expect(state.skillStatuses()[0]).toMatchObject({
       id: 'line_clearer',
       key: 'C',
-      ready: false,
-      reason: '安全演示中，稍后释放'
-    });
-
-    state.command('Skill1');
-    expect(state.energy).toBe(100);
-    expect(state.events).toContainEqual({ type: 'skillFeedback', id: 'line_clearer', message: '安全演示中，稍后释放', success: false });
-
-    state.step(FIRST_REWARD_SAFETY_MS);
-    expect(state.skillStatuses()[0]).toMatchObject({
-      id: 'line_clearer',
-      key: 'C',
       ready: true,
-      action: 'C 释放最低行清除'
+      reason: 'C 释放最低行清除'
     });
 
     state.command('Skill1');
     expect(state.energy).toBe(20);
-    expect(state.events).toContainEqual({ type: 'skillFeedback', id: 'line_clearer', message: 'C 释放最低行清除', success: true });
+    expect(state.events).toContainEqual({ type: 'skillFeedback', id: 'line_clearer', message: '行清除器发动', success: true, energySpent: 100 });
+    expect(state.skillStatuses()[0]).toMatchObject({
+      id: 'line_clearer',
+      key: 'C',
+      ready: false,
+      reason: '能量不足 100'
+    });
 
     state.command('Skill1');
     expect(state.events).toContainEqual({ type: 'skillFeedback', id: 'line_clearer', message: '能量不足 100', success: false });
@@ -233,13 +235,13 @@ describe('GameState', () => {
     state.rewardOptions = [findUpgrade('precision_hard_drop'), findUpgrade('stable_preview'), findUpgrade('line_clearer')];
 
     state.selectReward(2);
-    expect(state.skillStatuses()[0]).toMatchObject({ ready: false, reason: '安全演示中，稍后释放' });
+    expect(state.skillStatuses()[0]).toMatchObject({ ready: true, reason: 'C 释放最低行清除' });
 
     nowMs += FIRST_REWARD_SAFETY_MS + 1;
 
     expect(state.skillStatuses()[0]).toMatchObject({ ready: true, reason: 'C 释放最低行清除' });
     state.command('Skill1');
-    expect(state.events).toContainEqual({ type: 'skillFeedback', id: 'line_clearer', message: 'C 释放最低行清除', success: true });
+    expect(state.events).toContainEqual({ type: 'skillFeedback', id: 'line_clearer', message: '行清除器发动', success: true, energySpent: 100 });
     expect(state.energy).toBe(20);
   });
 
@@ -254,7 +256,7 @@ describe('GameState', () => {
     state.energy = 100;
     expect(state.skillStatuses()[0]).toMatchObject({ key: 'C', ready: true, action: 'C 释放最低行清除' });
     state.command('Skill1');
-    expect(state.events).toContainEqual({ type: 'skillFeedback', id: 'line_clearer', message: 'C 释放最低行清除', success: true });
+    expect(state.events).toContainEqual({ type: 'skillFeedback', id: 'line_clearer', message: '行清除器发动', success: true, energySpent: 100 });
   });
 
   it('consumes full energy after an energy-triggered reward selection', () => {
