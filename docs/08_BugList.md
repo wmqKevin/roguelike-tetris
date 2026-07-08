@@ -260,3 +260,35 @@ ZI-103 hotfix verification:
 - `npm run build`: passed.
 - `npm audit --audit-level=high`: 0 vulnerabilities.
 - `git apply --check` against base `dd908900`: passed for the final v0.6 hotfix patch.
+
+## BUG-010 - C skill release fly-text overlaps trial reward feedback
+
+Severity: P1
+Owner: Development
+Blocks release: Was Yes
+Status: Closed in v0.10
+
+### Evidence
+
+ZI-132 v0.9 online retest found that C / line-clearer success could emit the
+center skill fly-text, energy spend text, trial trigger text, and trial
+completion text in the same release moment. The functionality worked, but the
+peak was hard to read and screenshots did not reliably catch the intended center
+feedback.
+
+### Resolution
+
+ZI-135 adds a scene feedback queue for skill and trial peaks. A successful C
+cast now plays a short pause immediately, center `行清除器发动` plus bottom-row
+sweep at about 220ms, `-100` energy fly-text at about 920ms, and the trial
+reward strip after the next queue slot. The trial completion strip persists for
+2 seconds and the normal target switches to `再消 N 行拿下一奖`.
+
+### Regression
+
+- Unit coverage asserts the skill feedback schedule: 0ms pause, 220ms peak, and
+  920ms energy spend.
+- Unit coverage asserts trial completion emits `+20 能量 / +120 分 / 徽章进度 +1`
+  and updates the next-goal copy.
+- HUD coverage asserts the reward strip and nearby low-energy C-row warning
+  render through compact layout state.
