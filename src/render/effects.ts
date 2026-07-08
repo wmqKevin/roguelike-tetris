@@ -52,6 +52,11 @@ export class Effects {
     this.floatingText(message, this.scene.scale.width / 2, this.scene.scale.height * 0.38, '#ffde59', 1000);
   }
 
+  skillReleasePause(): void {
+    if (!this.reducedMotion) this.scene.cameras.main.shake(180, 0.006);
+    this.flash(0xffffff, 0.16, 160);
+  }
+
   bottomRowSweep(layout: Layout): void {
     const y = layout.boardY + layout.cell * 19 + layout.cell / 2;
     const width = layout.cell * 10;
