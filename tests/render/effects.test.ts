@@ -59,4 +59,39 @@ describe('first reward demo effects', () => {
     expect(scene.add.circle).toHaveBeenCalled();
     expect(createdTexts).toContain('技能已就绪');
   });
+
+  it('uses distinct peak labels for first reward, tetris, and skill feedback', async () => {
+    const { Effects } = await import('../../src/render/effects');
+    const createdTexts: string[] = [];
+    const chain = {
+      setOrigin: () => chain,
+      setStrokeStyle: () => chain,
+      destroy: () => undefined,
+      explode: () => undefined
+    };
+    const scene = {
+      scale: { width: 960, height: 720 },
+      cameras: { main: { shake: vi.fn() } },
+      textures: { exists: vi.fn(() => true) },
+      time: { delayedCall: vi.fn((_delay: number, callback: () => void) => callback()) },
+      add: {
+        rectangle: vi.fn(() => chain),
+        circle: vi.fn(() => chain),
+        particles: vi.fn(() => chain),
+        text: vi.fn((_x: number, _y: number, value: string) => {
+          createdTexts.push(value);
+          return chain;
+        })
+      },
+      tweens: { add: vi.fn((config: { onComplete?: () => void }) => config.onComplete?.()) }
+    };
+
+    const effects = new Effects(scene as never, false);
+    effects.firstRewardPeak();
+    effects.tetrisPeak();
+    effects.skillPeak();
+
+    expect(createdTexts).toEqual(expect.arrayContaining(['首奖生效', 'TETRIS!', '技能释放']));
+    expect(scene.cameras.main.shake).toHaveBeenCalledTimes(3);
+  });
 });
