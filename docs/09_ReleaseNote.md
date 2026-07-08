@@ -4,6 +4,59 @@ Release date: 2026-07-08
 Platform: Web
 Deployment URL: https://wmqkevin.github.io/roguelike-tetris/
 
+## v0.8.0 Release
+
+v0.8.0 focuses on making rewards usable immediately after pickup, clarifying
+skill outcomes, and keeping low-height landscape reward choices readable.
+
+### Release Scope
+
+- P0: 520x390 landscape reward state now keeps danger copy in a single
+  non-overlapping status strip, pauses reward-phase toast overlap, and uses
+  shorter two-column reward cards.
+- P0: Skills now have a closed feedback loop: unavailable/low-energy casts show
+  explicit toast reasons, ready skills highlight in the HUD, line clearer shows
+  a target-row preview, C releases the first active skill, and successful casts
+  emit result fly-text. Hold moved to Shift/V; 1/2/3 remain reward selection.
+- P1: First reward choices now start a 10-second trial goal after the safety
+  demo; completing the trial grants +20 energy and +120 score feedback.
+- P1: Reward cards show build labels such as recommended, build core,
+  shortfall patch, immediate effect, and skill unlock; rare/epic cards have
+  stronger visual treatment.
+- P1: Settlement copy now reports build-route progress such as `清场流 2/3`
+  while retaining next-run build advice.
+
+### Verification
+
+- `npm install`: completed with 0 vulnerabilities.
+- `npm audit --audit-level=high`: completed with 0 high/critical
+  vulnerabilities.
+- `npm test`: 5 files / 45 tests passed.
+- `npm run build`: passed and produced `assets/index-BEozkN_s.js`
+  (1,248.93 kB, gzip 334.94 kB), `assets/index-DiInh9Gy.css` (0.39 kB,
+  gzip 0.28 kB), and `index.html` (0.40 kB, gzip 0.27 kB). Vite still reports
+  the expected Phaser bundle-size warning.
+- Real Chrome smoke should cover 390x844 portrait, 520x390 landscape, and
+  960x720 desktop before deployment.
+
+### Known Risks
+
+- The main JavaScript chunk still exceeds Vite's 500 kB warning threshold
+  because Phaser is bundled with the game.
+- Touch controls remain outside this scope; keyboard and click/tap reward
+  selection remain the supported input paths.
+- P2 audio mix, codex/badge entry strengthening, broader device coverage, and
+  bundle-splitting remain deferred.
+
+### Rollback Plan
+
+- To roll back to v0.7.0, restore `gh-pages` deploy commit
+  `374e687839941537f1ff8d5383fcb812c9fa4aa2`.
+- To roll back to v0.6.0, restore `gh-pages` deploy commit
+  `92902c2d6a04323652227eaaffba8bcb6a4bf4d1`.
+- The v0.7.0 source baseline is `main`
+  `aeab311cd900c0151e1a041bc2761533235427d6`.
+
 ## v0.7.0 Release
 
 v0.7.0 focuses on making the first roguelike power spike safer and clearer,
