@@ -4,6 +4,55 @@ Release date: 2026-07-09
 Platform: Web
 Deployment URL: https://wmqkevin.github.io/roguelike-tetris/
 
+## v0.10.0 Release
+
+v0.10.0 sharpens the C-skill release peak and first-reward trial completion
+feedback without changing the core Tetris loop.
+
+### Release Scope
+
+- P0: C / line-clearer success feedback is staggered into pause/shake,
+  center `行清除器发动` plus bottom-row sweep, then `-100` energy fly-text.
+- P0: First trial completion now shows a 2-second reward strip:
+  `试用完成 +20 能量 / +120 分 / 徽章进度 +1`, with green energy refill flashing
+  and immediate next-goal copy.
+- P1: Low-energy skill failure now appears beside the C skill row; the row
+  shakes for 250ms and flashes red/yellow.
+- P1: Skill and trial peak feedback use a small scene queue so fly-text events
+  are offset instead of rendering in the same frame.
+
+### Verification
+
+- `npm install --cache /tmp/npm-cache`: completed with 0 vulnerabilities.
+- `npm test`: 5 files / 50 tests passed.
+- `npm run build`: passed and produced `assets/index-BI-gacyo.js`
+  (1,255.47 kB, gzip 336.72 kB), `assets/index-DiInh9Gy.css` (0.39 kB,
+  gzip 0.28 kB), and `index.html` (0.40 kB, gzip 0.27 kB). Vite still reports
+  the expected Phaser bundle-size warning.
+- `npm audit --audit-level=high`: completed with 0 vulnerabilities.
+- Headless Google Chrome screenshots rendered nonblank at 390x844 portrait,
+  520x390 landscape, and 960x720 desktop.
+
+### Known Risks
+
+- Reliable subjective audio mix/BGM feel was not verified in this
+  headless/sandbox runtime; Stage 4 online retest should cover skill release,
+  reward selection, and Game Over volume balance on a real audible device.
+- Browser regression coverage is headless smoke plus source/unit coverage, not a
+  full physical-device playtest; Stage 4 online retest remains the final
+  playable-device gate.
+- BUG-010 fly-text overlap is closed by the v0.10 staggered queue, but should be
+  rechecked online after deployment.
+- P2 items remain deferred.
+
+### Rollback Plan
+
+- To roll back to v0.9.0, restore `gh-pages` deploy commit
+  `1c872ad2fb05a0ee3f98485bfa528cf40fc06cd2` and `main`
+  `1abfc9e4de5bffaae37d4a986c84788ba343213b`.
+- To roll back to v0.8.0, restore `gh-pages` deploy commit
+  `3fcca2cc1e00ea4da94e2fe2f1543d94618ae61b`.
+
 ## v0.9.0 Release
 
 v0.9.0 focuses on making the first skill pickup safe and satisfying, improving
