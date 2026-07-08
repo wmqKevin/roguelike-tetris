@@ -2,6 +2,11 @@ export type SaveData = {
   version: 1;
   highScore: number;
   bestStage: number;
+  codex: {
+    upgrades: string[];
+    stageBadges: number[];
+    bestRunStyle: string;
+  };
   settings: {
     masterVolume: number;
     sfxVolume: number;
@@ -17,6 +22,11 @@ export function defaultSave(): SaveData {
     version: 1,
     highScore: 0,
     bestStage: 0,
+    codex: {
+      upgrades: [],
+      stageBadges: [],
+      bestRunStyle: '基础挑战'
+    },
     settings: {
       masterVolume: 1,
       sfxVolume: 0.8,
@@ -31,20 +41,34 @@ export function loadSave(): SaveData {
     const raw = localStorage.getItem(KEY);
     if (!raw) return defaultSave();
     const parsed = JSON.parse(raw) as Partial<SaveData>;
-    return { ...defaultSave(), ...parsed, settings: { ...defaultSave().settings, ...parsed.settings } };
+    const base = defaultSave();
+    return {
+      ...base,
+      ...parsed,
+      codex: { ...base.codex, ...parsed.codex },
+      settings: { ...base.settings, ...parsed.settings }
+    };
   } catch {
     return defaultSave();
   }
 }
 
 export function save(data: SaveData): void {
-  localStorage.setItem(KEY, JSON.stringify(data));
+  try {
+    localStorage.setItem(KEY, JSON.stringify(data));
+  } catch (error) {
+    console.warn('Save skipped: localStorage write failed.', error);
+  }
 }
 
-export function recordRun(score: number, stage: number): SaveData {
+export function recordRun(score: number, stage: number, upgradeIds: string[] = [], runStyle = '基础挑战'): SaveData {
   const data = loadSave();
+  const isBestScore = score >= data.highScore;
   data.highScore = Math.max(data.highScore, score);
   data.bestStage = Math.max(data.bestStage, stage);
+  data.codex.upgrades = Array.from(new Set([...data.codex.upgrades, ...upgradeIds])).sort();
+  data.codex.stageBadges = Array.from(new Set([...data.codex.stageBadges, stage])).sort((a, b) => a - b);
+  if (isBestScore || data.codex.bestRunStyle === '基础挑战') data.codex.bestRunStyle = runStyle;
   save(data);
   return data;
 }
