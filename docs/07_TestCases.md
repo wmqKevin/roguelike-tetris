@@ -1,12 +1,12 @@
 # 07_TestCases - MVP QA Test Cases
 
-Issue: ZI-62  
-Build under test: ZI-61 latest delivery attachment `019f39e7-9708-76d6-979d-1dd608114fd7`  
-Date: 2026-07-07
+Issue: ZI-109
+Build under test: v0.7 development patch on v0.6.0 base `cbdc67b0`
+Date: 2026-07-08
 
 ## Scope
 
-MVP scope is the leader-approved cut: desktop keyboard first, first 6-8 stages, no full T-Spin, no touch controls, no permanent meta progression. v0.6 adds portrait toast fixes, first-reward demonstration feedback, synthesized BGM/SFX layering, and terminal next-run advice.
+MVP scope is the leader-approved cut: desktop keyboard first, first 6-8 stages, no full T-Spin, no touch controls, no permanent meta progression. v0.7 adds first-reward safety demonstration, Stage 1-2 newcomer buffer, 520x390 landscape readability, build guidance, and layered peak feedback.
 
 ## Test Cases
 
@@ -43,9 +43,15 @@ MVP scope is the leader-approved cut: desktop keyboard first, first 6-8 stages, 
 | TC-029 | BGM fallback | P1 | Unit-test `AudioManager` without Web Audio | SFX/music calls no-op without throwing | PASS |
 | TC-030 | Real Chrome portrait | P0 | Headless Google Chrome 390x844 screenshot | Board renders, target is split into two rows, no app asset 404 seen in output | PASS with note |
 | TC-031 | Real Chrome desktop | P0 | Headless Google Chrome 960x720 screenshot | Desktop side HUD and board render without layout regression | PASS |
+| TC-032 | First reward safety | P0 | Unit-test first reward selection then step/input before 1.5s | Gravity and commands are frozen until the safety window ends | PASS |
+| TC-033 | Stage 1-2 buffer | P0 | Unit-test effective gravity interval at Stage 1 versus Stage 3 | Stage 1-2 interval is slower than later normal curve | PASS |
+| TC-034 | Newcomer danger rescue | P0 | Unit-test high stack before first reward within first 12 locks | One-time rescue clears lowest row and emits danger copy | PASS |
+| TC-035 | Landscape 520 layout | P1 | Unit-test `createLayout(520,390,520)` | Compact landscape board is fixed left and fits vertically | PASS |
+| TC-036 | Build guidance | P1 | Unit-test run-style guidance strings | UPGRADES/current build and next-run build advice are generated | PASS |
+| TC-037 | Peak feedback layers | P1 | Unit-test peak effect labels for first reward/Tetris/skill | Distinct fly-text and shake paths are called | PASS |
 
 ## Environment
 
 - Node/npm environment in Multica runtime
 - Dev server: Vite on `127.0.0.1:4173`
-- Browser automation: Google Chrome headless screenshots are available; interactive reward/toast playthrough automation is not available in this runtime, so toast behavior is covered by unit geometry tests plus visual smoke screenshots.
+- Browser automation: Google Chrome headless screenshots are requested for 390x844, 520x390, and 960x720. Interactive reward playthrough remains covered by unit behavior tests plus visual smoke screenshots where browser tooling is available.
