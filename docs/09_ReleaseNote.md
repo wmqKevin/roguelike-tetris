@@ -1,8 +1,53 @@
 # Neon Breach Tetris Release Notes
 
-Release date: 2026-07-08
+Release date: 2026-07-09
 Platform: Web
 Deployment URL: https://wmqkevin.github.io/roguelike-tetris/
+
+## v0.9.0 Release
+
+v0.9.0 focuses on making the first skill pickup safe and satisfying, improving
+portrait reward readability, and surfacing longer-term run goals before the
+player dies.
+
+### Release Scope
+
+- P0: Successful C/line-clearer casts now show `行清除器发动` center fly-text,
+  stronger shake/flash/particles, and a bottom-row sweep while spending energy.
+  Low-energy failure feedback is positioned near the skill/board-bottom area.
+- P0: First reward skill cards now open a protected skill trial window: gravity
+  and danger remain paused until the player can press C, while the skill itself
+  is allowed during protection.
+- P1: 390px portrait reward selection now uses a focused recommended card with
+  full detail, while the other two rewards shrink to selectable title/tag chips.
+- P1: Trial completion copy now grants visible growth feedback:
+  `+20 能量 / 徽章进度 +1`.
+- P1: Opening HUD and post-reward route copy now surface recommended build,
+  unlockable badge, codex progress, and the current route such as `清场流`.
+
+### Verification
+
+- `npm install`: completed with 0 vulnerabilities.
+- `npm audit`: completed with 0 vulnerabilities.
+- `npm test`: 5 files / 48 tests passed.
+- `npm run build`: passed and produced `assets/index-BRfhnbcN.js`
+  (1,252.82 kB, gzip 335.99 kB), `assets/index-DiInh9Gy.css` (0.39 kB,
+  gzip 0.28 kB), and `index.html` (0.40 kB, gzip 0.27 kB). Vite still reports
+  the expected Phaser bundle-size warning.
+- Post-deploy HTTP smoke must confirm root 200, new JS 200, and old v0.8 JS 404.
+
+### Known Risks
+
+- The main JavaScript chunk still exceeds Vite's 500 kB warning threshold
+  because Phaser is bundled with the game.
+- P2 manual audio mix and broader physical-device coverage remain deferred.
+
+### Rollback Plan
+
+- To roll back to v0.8.0, restore `gh-pages` deploy commit
+  `3fcca2cc1e00ea4da94e2fe2f1543d94618ae61b`.
+- The v0.8.0 source baseline is `main`
+  `1ffe40238e4fa26b7b56580c85f60ec5a1d05315`.
 
 ## v0.8.0 Release
 
