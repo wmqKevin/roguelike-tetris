@@ -1,12 +1,12 @@
 # 07_TestCases - MVP QA Test Cases
 
-Issue: ZI-126
-Build under test: v0.9 development patch on v0.8.0 base `1ffe40238e4fa26b7b56580c85f60ec5a1d05315`
+Issue: ZI-135
+Build under test: v0.10 development patch on v0.9.0 base `1abfc9e4de5bffaae37d4a986c84788ba343213b`
 Date: 2026-07-09
 
 ## Scope
 
-MVP scope is the leader-approved cut: desktop keyboard first, first 6-8 stages, no full T-Spin, no touch controls, no permanent meta progression. v0.9 strengthens successful C-skill feedback, upgrades first-skill reward safety trial, changes 390 portrait rewards to focused card reading, makes trial completion rewards explicit, and moves run/codex/badge goals into the opening HUD.
+MVP scope is the leader-approved cut: desktop keyboard first, first 6-8 stages, no full T-Spin, no touch controls, no permanent meta progression. v0.10 keeps the v0.9 skill trial and portrait reward work, then staggers C-skill release peaks, makes the trial completion reward strip persist for 2 seconds, moves low-energy failure feedback next to the C skill row, and queues fly-text events to avoid overlap.
 
 ## Test Cases
 
@@ -59,6 +59,10 @@ MVP scope is the leader-approved cut: desktop keyboard first, first 6-8 stages, 
 | TC-045 | Portrait focused reward cards | P1 | Unit-test 390x844 focused reward layout | Recommended card is focused; non-focused cards fit as compact chips with title/tags only | PASS |
 | TC-046 | Trial completion reward strip | P1 | Unit-test trial completion event payload | Completion emits `+20 能量 / 徽章进度 +1` plus structured reward payload | PASS |
 | TC-047 | Opening long-term goals | P1 | Unit-test opening HUD copy | `本局推荐流派 / 可解锁徽章 / 图鉴进度` text is available before first reward | PASS |
+| TC-048 | C skill release stagger | P0 | Unit-test feedback schedule for line-clearer success | Pause starts at 0ms, center peak/sweep at 220ms, `-100` energy fly-text at 920ms | PASS |
+| TC-049 | Trial reward strip persistence | P0 | Unit-test trial completion state and HUD strip copy | Completion grants +20 energy / +120 score / badge +1, replaces old target, and HUD renders the reward strip | PASS |
+| TC-050 | Low-energy C row warning | P1 | Unit-test compact HUD warning state | `能量不足 100` appears beside the skill row, with red/yellow row styling for the 250ms shake window | PASS |
+| TC-051 | Fly-text event queue | P1 | Unit-test feedback scheduler | Skill and trial peak feedback items are offset by 300-500ms queue spacing instead of same-frame rendering | PASS |
 
 ## Environment
 
