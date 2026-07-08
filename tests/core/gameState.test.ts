@@ -109,9 +109,11 @@ describe('GameState', () => {
 
     expect(state.phase).toBe('playing');
     expect(state.lowPressurePiecesRemaining).toBe(4);
+    expect(state.firstRewardTrialRemaining).toBe(4);
 
     state.command('HardDrop');
     expect(state.lowPressurePiecesRemaining).toBe(3);
+    expect(state.firstRewardTrialRemaining).toBe(3);
   });
 
   it('emits first reward feedback and a next-step goal', () => {
@@ -121,8 +123,21 @@ describe('GameState', () => {
 
     state.selectReward(0);
 
-    expect(state.events).toContainEqual({ type: 'upgradeFeedback', message: 'Next +1', goal: '观察 4 个 Next 规划一次消行' });
-    expect(state.latestUpgradeGoal).toBe('观察 4 个 Next 规划一次消行');
+    expect(state.events).toContainEqual({ type: 'upgradeFeedback', message: 'Next +1', goal: '试用期 4 块：新增 Next 高亮 / 无垃圾 / 触发强化目标' });
+    expect(state.events).toContainEqual({ type: 'trialFeedback', message: '试用期 4 块：新增 Next 高亮 / 无垃圾 / 触发强化目标' });
+    expect(state.latestUpgradeGoal).toBe('试用期 4 块：新增 Next 高亮 / 无垃圾 / 触发强化目标');
+  });
+
+  it('gives first skill rewards a free trial cast', () => {
+    const state = new GameState('skill-trial');
+    state.phase = 'reward';
+    state.rewardOptions = [findUpgrade('line_clearer')];
+
+    state.selectReward(0);
+
+    expect(state.energy).toBe(100);
+    state.command('Skill1');
+    expect(state.events).toContainEqual({ type: 'trialFeedback', message: '试用触发：行清除器已清理底线' });
   });
 
   it('consumes full energy after an energy-triggered reward selection', () => {
