@@ -20,6 +20,7 @@ export class GameScene extends Phaser.Scene {
   private toast?: { message: string; untilMs: number };
   private highlightUntilMs = 0;
   private tutorialEnabled = true;
+  private runRecorded = false;
   private readonly usedTutorialActions = new Set<TutorialAction>();
 
   constructor() {
@@ -51,8 +52,10 @@ export class GameScene extends Phaser.Scene {
       toast: this.toast,
       highlightUntilMs: this.highlightUntilMs,
       showTutorial: this.tutorialEnabled && (this.state.phase === 'playing' || this.state.phase === 'reward'),
-      usedTutorialActions: this.usedTutorialActions
+      usedTutorialActions: this.usedTutorialActions,
+      codex: this.saveData.codex
     });
+    if (this.state.phase === 'victory') this.recordRunOnce();
   }
 
   private handleCommand(command: InputCommand): void {
@@ -98,16 +101,21 @@ export class GameScene extends Phaser.Scene {
         this.toast = { message: `${event.message}｜${event.goal}`, untilMs: this.time.now + 2200 };
         this.highlightUntilMs = this.time.now + 2200;
       }
+      if (event.type === 'trialFeedback') {
+        const layout = createLayout(this.scale.width, this.scale.height, this.displayWidth());
+        this.effects.floatingText(event.message, layout.boardX + layout.cell * 5, layout.boardY + layout.cell * 3);
+        this.toast = { message: event.message, untilMs: this.time.now + 2400 };
+        this.highlightUntilMs = this.time.now + 2400;
+      }
       if (event.type === 'special' || event.type === 'skill') {
         this.audio.playSfx('special');
         this.effects.specialTrigger();
       }
       if (event.type === 'gameOver') {
         this.audio.playSfx('game_over');
-        this.saveData = recordRun(this.state.score, this.state.stageIndex + 1);
+        this.recordRunOnce();
       }
     }
-    if (this.state.phase === 'victory') this.saveData = recordRun(this.state.score, this.state.stageIndex + 1);
   }
 
   private restart(): void {
@@ -116,6 +124,18 @@ export class GameScene extends Phaser.Scene {
     this.usedTutorialActions.clear();
     this.toast = undefined;
     this.highlightUntilMs = 0;
+    this.runRecorded = false;
+  }
+
+  private recordRunOnce(): void {
+    if (this.runRecorded) return;
+    this.saveData = recordRun(
+      this.state.score,
+      this.state.highestStageReached,
+      this.state.ownedUpgrades.map((upgrade) => upgrade.id),
+      this.state.runStyleLabel()
+    );
+    this.runRecorded = true;
   }
 
   private ghostPiece(): ActivePiece {
