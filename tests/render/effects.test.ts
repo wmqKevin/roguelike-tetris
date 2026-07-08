@@ -94,4 +94,42 @@ describe('first reward demo effects', () => {
     expect(createdTexts).toEqual(expect.arrayContaining(['首奖生效', 'TETRIS!', '技能释放']));
     expect(scene.cameras.main.shake).toHaveBeenCalledTimes(3);
   });
+
+  it('adds a bottom-row sweep for successful line-clearer casts', async () => {
+    const { Effects } = await import('../../src/render/effects');
+    const destroyed: string[] = [];
+    const makeChain = (name: string) => {
+      const chain = {
+        setOrigin: () => chain,
+        setStrokeStyle: () => chain,
+        destroy: () => {
+          destroyed.push(name);
+        }
+      };
+      return chain;
+    };
+    const scene = {
+      scale: { width: 390, height: 844 },
+      cameras: { main: { shake: vi.fn() } },
+      add: {
+        rectangle: vi.fn((_x: number, _y: number, _w: number, _h: number) => makeChain(`rect-${scene.add.rectangle.mock.calls.length}`))
+      },
+      tweens: { add: vi.fn((config: { onComplete?: () => void }) => config.onComplete?.()) }
+    };
+
+    const effects = new Effects(scene as never, false);
+    effects.bottomRowSweep({
+      boardX: 20,
+      boardY: 108,
+      cell: 35,
+      sideLeftX: 24,
+      sideRightX: 440,
+      compactHud: true,
+      portrait: true
+    });
+
+    expect(scene.add.rectangle).toHaveBeenCalledTimes(2);
+    expect(scene.tweens.add).toHaveBeenCalledTimes(2);
+    expect(destroyed).toHaveLength(2);
+  });
 });
