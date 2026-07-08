@@ -109,4 +109,11 @@ describe('responsive layout', () => {
     expect(createLayout(1280, 720, 520).compactHud).toBe(false);
     expect(createLayout(1280, 720, 521).compactHud).toBe(false);
   });
+
+  it('expands the board for narrow portrait viewports', () => {
+    const layout = createLayout(390, 844, 390);
+    expect(layout.portrait).toBe(true);
+    expect(layout.cell).toBeGreaterThanOrEqual(33);
+    expect(layout.boardY).toBeGreaterThanOrEqual(96);
+  });
 });
