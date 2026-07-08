@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { GameState } from '../../src/core/gameState';
 import { createLayout } from '../../src/render/responsiveLayout';
+import { findUpgrade } from '../../src/core/gameState';
 
 vi.mock('phaser', () => {
   class Rectangle {
@@ -224,6 +225,50 @@ describe('toast layout', () => {
 
     expect(createToastLayout(960, 720, false).width).toBe(520);
     expect(createToastLayout(500, 720, false).width).toBe(472);
+  });
+
+  it('places compact landscape toast below the top HUD band', async () => {
+    const { createToastLayout } = await import('../../src/render/hudRenderer');
+
+    const layout = createToastLayout(520, 390, true);
+
+    expect(layout.y - 23).toBeGreaterThanOrEqual(53);
+    expect(layout.y + 23).toBeLessThanOrEqual(100);
+  });
+});
+
+describe('v0.8 reward and build helpers', () => {
+  it('keeps 520x390 landscape reward cards below the status strip', async () => {
+    const { createRewardCardLayout } = await import('../../src/render/hudRenderer');
+    const layout = createLayout(520, 390, 520);
+    const cards = [0, 1, 2].map((index) => createRewardCardLayout(520, layout, index));
+
+    cards.forEach((card) => {
+      expect(card.cardH).toBeLessThanOrEqual(124);
+      expect(card.y - card.cardH / 2).toBeGreaterThanOrEqual(88);
+      expect(card.y + card.cardH / 2).toBeLessThanOrEqual(390 - 8);
+      expect(card.x + card.cardW / 2).toBeLessThanOrEqual(520 - 8);
+    });
+  });
+
+  it('summarizes danger copy into a single compact reward status line', async () => {
+    const { compactRewardStatusText } = await import('../../src/render/hudRenderer');
+
+    expect(compactRewardStatusText('顶部危险：已触发新手救场，自动清理最低一行')).toBe('危险状态：已清理底线');
+  });
+
+  it('assigns reward labels for recommendation, build core, immediate effect, and skill unlocks', async () => {
+    const { rewardCardLabels } = await import('../../src/render/hudRenderer');
+
+    expect(rewardCardLabels(findUpgrade('stable_preview'), 0)).toEqual(['推荐', '补短板', '立即生效']);
+    expect(rewardCardLabels(findUpgrade('line_clearer'), 2)).toEqual(['流派核心', '解锁技能']);
+  });
+
+  it('reports settlement build route progress', async () => {
+    const { buildRouteProgressText } = await import('../../src/render/hudRenderer');
+
+    expect(buildRouteProgressText([findUpgrade('line_clearer'), findUpgrade('precision_hard_drop')])).toBe('清场流 2/3');
+    expect(buildRouteProgressText([findUpgrade('stable_preview')])).toBe('预判流 1/3');
   });
 });
 
