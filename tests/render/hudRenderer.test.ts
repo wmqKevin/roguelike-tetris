@@ -270,6 +270,20 @@ describe('v0.8 reward and build helpers', () => {
     expect(buildRouteProgressText([findUpgrade('line_clearer'), findUpgrade('precision_hard_drop')])).toBe('清场流 2/3');
     expect(buildRouteProgressText([findUpgrade('stable_preview')])).toBe('预判流 1/3');
   });
+
+  it('uses a focused portrait reward layout with compact non-focused chips', async () => {
+    const { createFocusedRewardLayout } = await import('../../src/render/hudRenderer');
+    const layout = createLayout(390, 844, 390);
+    const reward = createFocusedRewardLayout(390, 844, layout);
+
+    expect(reward.focusedIndex).toBe(0);
+    expect(reward.cardW).toBeLessThanOrEqual(358);
+    expect(reward.cardH).toBe(150);
+    expect(reward.detailW).toBe(346);
+    expect(reward.chipW * 3 + reward.chipGap * 2).toBeLessThanOrEqual(390 - 32);
+    expect(reward.stripY).toBeLessThan(reward.y - reward.cardH / 2);
+    expect(reward.detailY).toBeGreaterThan(reward.y + reward.cardH / 2);
+  });
 });
 
 describe('responsive layout', () => {
