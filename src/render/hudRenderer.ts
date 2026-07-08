@@ -11,6 +11,9 @@ export type HudUiState = {
   nowMs: number;
   toast?: { message: string; untilMs: number };
   highlightUntilMs: number;
+  energyRefillUntilMs?: number;
+  skillWarning?: { message: string; skillId?: string; untilMs: number; shakeUntilMs: number };
+  trialRewardStrip?: { message: string; untilMs: number };
   firstRewardDemo?: { effect: UpgradeEffect; untilMs: number };
   showTutorial: boolean;
   usedTutorialActions: ReadonlySet<TutorialAction>;
@@ -332,11 +335,12 @@ export class HudRenderer {
     const highlight = ui.nowMs < ui.highlightUntilMs;
     this.stat(x, y, 'LINES', `${state.linesInStage} / ${state.linesUntilReward() + state.linesInStage}`, highlight ? '#ffde59' : '#ffffff'); y += 52;
     this.stat(x, y, 'ENERGY', `${Math.floor(state.energy)} / 200`, highlight || 200 - state.energy <= 20 ? '#ffde59' : '#ffffff');
-    this.energyBar(x, y + 36, state.energy / 200, ui.nowMs);
-    this.skillPanel(x, y + 58, state.skillStatuses(), ui.nowMs);
+    this.energyBar(x, y + 36, state.energy / 200, ui.nowMs, ui.energyRefillUntilMs);
+    this.skillPanel(x, y + 58, state.skillStatuses(), ui.nowMs, false, ui.skillWarning);
     this.skillTargetPreview(state, layout, ui.nowMs);
     if (state.lowPressurePiecesRemaining > 0) this.text(layout.boardX, layout.boardY + layout.cell * 20 + 42, `低压缓冲 ${state.lowPressurePiecesRemaining} 块`, 16, '#ffde59');
     if (state.dangerHintText) this.text(layout.boardX, layout.boardY + layout.cell * 20 + 68, state.dangerHintText, 16, '#ffde59').setWordWrapWidth(layout.cell * 10);
+    else if (ui.trialRewardStrip && ui.nowMs < ui.trialRewardStrip.untilMs) this.trialRewardStrip(layout.boardX, layout.boardY + layout.cell * 20 + 68, layout.cell * 10, ui.trialRewardStrip.message, ui.nowMs);
     else if (state.latestUpgradeGoal) this.text(layout.boardX, layout.boardY + layout.cell * 20 + 68, state.latestUpgradeGoal, 16, '#9befff');
     if (state.phase === 'playing') this.text(layout.boardX, layout.boardY - 74, state.openingGoalText(), 15, '#9befff').setWordWrapWidth(layout.cell * 10);
   }
@@ -349,7 +353,7 @@ export class HudRenderer {
     this.text(246, topY, `Best ${highScore}`, 16, '#75a7ba');
     this.text(14, topY + 24, `目标 ${state.linesInStage}/${state.linesUntilReward() + state.linesInStage}`, 16, highlight ? '#ffde59' : '#d7f7ff');
     this.text(136, topY + 24, `能量 ${Math.floor(state.energy)}/200`, 16, highlight || 200 - state.energy <= 20 ? '#ffde59' : '#ffffff');
-    this.energyBar(Math.max(206, this.scene.scale.width - 184), layout.portrait ? topY + 54 : topY + 34, state.energy / 200, ui.nowMs);
+    this.energyBar(Math.max(206, this.scene.scale.width - 184), layout.portrait ? topY + 54 : topY + 34, state.energy / 200, ui.nowMs, ui.energyRefillUntilMs);
     if (layout.portrait) {
       const trayY = Math.min(this.scene.scale.height - 68, layout.boardY + layout.cell * 20 + 24);
       this.label(14, trayY, 'HOLD');
@@ -370,7 +374,8 @@ export class HudRenderer {
     const goalY = layout.portrait ? this.scene.scale.height - 30 : state.phase === 'reward' ? 64 : 62;
     const goalX = compactLandscape && state.phase === 'reward' ? layout.boardX + layout.cell * 10 + 14 : 14;
     const goalW = compactLandscape && state.phase === 'reward' ? this.scene.scale.width - goalX - 12 : this.scene.scale.width - 28;
-    if (state.firstRewardTrialRemaining > 0) this.text(goalX, goalY, `${state.firstRewardTrialText}（剩 ${state.firstRewardTrialRemaining} 块）`, 14, '#ffde59').setWordWrapWidth(goalW);
+    if (ui.trialRewardStrip && ui.nowMs < ui.trialRewardStrip.untilMs) this.trialRewardStrip(goalX, goalY, goalW, ui.trialRewardStrip.message, ui.nowMs);
+    else if (state.firstRewardTrialRemaining > 0) this.text(goalX, goalY, `${state.firstRewardTrialText}（剩 ${state.firstRewardTrialRemaining} 块）`, 14, '#ffde59').setWordWrapWidth(goalW);
     else if (state.dangerHintText) this.text(goalX, goalY, state.phase === 'reward' && compactLandscape ? compactRewardStatusText(state.dangerHintText) : state.dangerHintText, state.phase === 'reward' && compactLandscape ? 13 : 15, '#ffde59').setWordWrapWidth(goalW);
     else if (state.lowPressurePiecesRemaining > 0) this.text(goalX, goalY, `低压缓冲 ${state.lowPressurePiecesRemaining} 块`, 15, '#ffde59');
     else if (state.latestUpgradeGoal && state.phase !== 'reward') this.text(goalX, goalY, state.latestUpgradeGoal, 15, '#9befff').setWordWrapWidth(360);
@@ -384,7 +389,7 @@ export class HudRenderer {
         const guidance = state.ownedUpgrades.length > 0 ? state.currentBuildGuidanceText() : state.openingGoalText();
         this.text(x, 62, guidance, 14, '#ffde59').setWordWrapWidth(this.scene.scale.width - x - 10);
       }
-      this.skillPanel(x, 88, state.skillStatuses(), ui.nowMs, true);
+      this.skillPanel(x, 88, state.skillStatuses(), ui.nowMs, true, ui.skillWarning);
       this.skillTargetPreview(state, layout, ui.nowMs);
     }
   }
@@ -550,17 +555,22 @@ export class HudRenderer {
     return '试用期 4 块';
   }
 
-  private skillPanel(x: number, y: number, statuses: SkillStatus[], nowMs: number, compact = false): void {
+  private skillPanel(x: number, y: number, statuses: SkillStatus[], nowMs: number, compact = false, warning?: HudUiState['skillWarning']): void {
     if (!statuses.some((skill) => skill.id)) return;
     const width = compact ? Math.min(190, this.scene.scale.width - x - 10) : 180;
     statuses.forEach((skill, index) => {
       const rowY = y + index * (compact ? 24 : 30);
+      const warned = Boolean(warning && nowMs < warning.untilMs && (!warning.skillId || warning.skillId === skill.id || index === 0));
+      const shaking = warned && nowMs < warning!.shakeUntilMs;
+      const shakeX = shaking ? (Math.floor(nowMs / 42) % 2 === 0 ? -5 : 5) : 0;
       const readyPulse = skill.ready ? 0.7 + Math.sin(nowMs / 90) * 0.18 : 0.35;
-      const bg = this.scene.add.rectangle(x + width / 2, rowY + 9, width, compact ? 20 : 24, skill.ready ? 0x163c4d : 0x1b2a46, skill.ready ? readyPulse : 0.68)
-        .setStrokeStyle(skill.ready ? 2 : 1, skill.ready ? 0xffde59 : 0x75a7ba, skill.ready ? 0.92 : 0.55);
+      const warningPulse = 0.68 + Math.sin(nowMs / 45) * 0.22;
+      const bg = this.scene.add.rectangle(x + width / 2 + shakeX, rowY + 9, width, compact ? 20 : 24, warned ? 0x4d1822 : skill.ready ? 0x163c4d : 0x1b2a46, warned ? warningPulse : skill.ready ? readyPulse : 0.68)
+        .setStrokeStyle(warned ? 2 : skill.ready ? 2 : 1, warned ? 0xffde59 : skill.ready ? 0xffde59 : 0x75a7ba, warned ? 1 : skill.ready ? 0.92 : 0.55);
       this.cards.push(this.scene.add.container(0, 0, [bg]));
       const label = skill.id ? `${skill.key} ${skill.name} ${skill.ready ? skill.action : skill.reason}` : `${skill.key} 未解锁`;
-      this.text(x + 8, rowY, label, compact ? 12 : 13, skill.ready ? '#ffde59' : '#9befff').setWordWrapWidth(width - 16);
+      this.text(x + 8 + shakeX, rowY, label, compact ? 12 : 13, warned ? '#ffde59' : skill.ready ? '#ffde59' : '#9befff').setWordWrapWidth(width - 16);
+      if (warned && warning) this.skillWarningToast(x, rowY, width, compact, warning.message);
     });
   }
 
@@ -623,10 +633,30 @@ export class HudRenderer {
     this.text(x, y + 18, value, 24, valueColor);
   }
 
-  private energyBar(x: number, y: number, ratio: number, nowMs: number): void {
+  private skillWarningToast(x: number, rowY: number, width: number, compact: boolean, message: string): void {
+    const toastW = compact ? Math.min(178, Math.max(112, this.scene.scale.width - x - 14)) : 188;
+    const toastX = compact ? x + toastW / 2 : x + width / 2;
+    const toastY = rowY + (compact ? 31 : 36);
+    const bg = this.scene.add.rectangle(toastX, toastY, toastW, compact ? 24 : 28, 0x3a1020, 0.95).setStrokeStyle(2, 0xffde59, 0.95);
+    this.cards.push(this.scene.add.container(0, 0, [bg]));
+    this.text(toastX, toastY - (compact ? 8 : 9), message, compact ? 11 : 12, '#ffde59')
+      .setOrigin(0.5, 0)
+      .setWordWrapWidth(toastW - 14);
+  }
+
+  private trialRewardStrip(x: number, y: number, width: number, message: string, nowMs: number): void {
+    const pulse = 0.74 + Math.sin(nowMs / 85) * 0.14;
+    const h = 28;
+    const bg = this.scene.add.rectangle(x + width / 2, y + 10, width, h, 0x103d2a, pulse).setStrokeStyle(2, 0x3dff9b, 0.9);
+    this.cards.push(this.scene.add.container(0, 0, [bg]));
+    this.text(x + 10, y, message, 14, '#d9ffe8').setWordWrapWidth(width - 20);
+  }
+
+  private energyBar(x: number, y: number, ratio: number, nowMs: number, refillUntilMs = 0): void {
     const bg = this.scene.add.rectangle(x + 80, y, 160, 12, 0x1b2a46, 1).setOrigin(0.5);
     const alpha = ratio >= 0.9 ? 0.72 + Math.sin(nowMs / 90) * 0.22 : 1;
-    const fg = this.scene.add.rectangle(x, y, Math.max(2, 160 * ratio), 12, 0xff2bd6, alpha).setOrigin(0, 0.5);
+    const refilling = nowMs < refillUntilMs;
+    const fg = this.scene.add.rectangle(x, y, Math.max(2, 160 * ratio), 12, refilling ? 0x3dff9b : 0xff2bd6, refilling ? 0.72 + Math.sin(nowMs / 55) * 0.25 : alpha).setOrigin(0, 0.5);
     this.cards.push(this.scene.add.container(0, 0, [bg, fg]));
   }
 
