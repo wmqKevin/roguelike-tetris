@@ -1,3 +1,68 @@
+# Neon Breach Tetris Release Notes
+
+Release date: 2026-07-08
+Platform: Web
+Deployment URL: https://wmqkevin.github.io/roguelike-tetris/
+
+## v0.5.0 Release
+
+v0.5.0 focuses on phone-first playability and making the first roguelike reward
+feel immediately concrete, while adding lightweight post-run progression hooks.
+
+### Release Scope
+
+- P0: Narrow portrait launches now use a viewport-sized canvas and independent
+  portrait layout instead of scaling the fixed 1280x720 stage. The board is
+  enlarged for 390px phones, with status text near the top and Hold/Next in the
+  bottom tray. Landscape, 520px+, and desktop layouts keep the v0.4 FIT path.
+- P0: First reward choices now include a four-piece trial window and immediate
+  demonstrations: precise hard drop can force a high-drop I piece with energy
+  feedback, stable preview highlights the additional Next value, and advanced
+  skill grants enough energy to try the skill right away.
+- P1: Game Over and Victory summaries now explain the failure reason, the best
+  run performance, the run style, and the next improvement target.
+- P1: A lightweight local codex records collected upgrades, highest-stage
+  badges, and best run style through `localStorage`, with write-failure fallback
+  so storage restrictions do not interrupt terminal flow.
+- P2: BGM, sound layering, particle intensity, new stages, new special blocks,
+  backend meta progression, and leaderboards remain deferred to v0.6+.
+
+### Verification
+
+- `npm install`: required before release verification; expected 0
+  vulnerabilities.
+- `npm audit --audit-level=high`: required to report 0 high/critical
+  vulnerabilities.
+- `npm test`: required to pass all automated tests; QA accepted 4 files / 23
+  tests after BUG-008 hotfix.
+- `npm run build`: required to produce the production bundle.
+- Real Chrome QA gate: 390x844 portrait board enlarged with top status and
+  bottom Hold/Next; 844x390 landscape and 1280x720 desktop retain the regular
+  FIT / side-HUD layout.
+- GitHub Pages HTTP smoke: root page and the new hashed JavaScript asset must
+  return 200 after deployment; the superseded v0.4 JavaScript asset should
+  return 404 after cleanup.
+
+### Known Risks
+
+- The main JavaScript chunk is expected to remain above Vite's 500 kB warning
+  threshold because Phaser is bundled with the game.
+- Mobile validation covered 390x844 browser automation and QA review; broader
+  physical-device coverage, audio feel, and particle polish are deferred to
+  v0.6.
+- Local codex data is intentionally browser-local and can be unavailable in
+  private or restricted storage contexts; v0.5 falls back without crashing, but
+  persistence may be skipped by the browser.
+
+### Rollback Plan
+
+- GitHub Pages serves the `gh-pages` branch. To roll back to v0.4.0, restore
+  deploy commit `6be0aa16979e53c6b3c82503ddf25078e84c536c`.
+- The v0.4.0 source baseline is `main`
+  `357b334c329a56d212f69e5f5384e516b6a838f8`.
+- Keep source and Pages commit SHAs in release/deployment logs so the previous
+  build can be restored without rebuilding.
+
 # Neon Breach Tetris v0.4.0 Release Note
 
 Release date: 2026-07-07
