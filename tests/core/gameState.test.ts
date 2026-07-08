@@ -118,7 +118,8 @@ describe('GameState', () => {
     state.command('HardDrop');
     expect(state.lowPressurePiecesRemaining).toBe(3);
     expect(state.firstRewardTrialRemaining).toBe(0);
-    expect(state.events).toContainEqual({ type: 'trialFeedback', message: '试用完成：完成高落差硬降，+20 能量 / 徽章进度 +1', reward: { energy: 20, badgeProgress: 1 } });
+    expect(state.events).toContainEqual({ type: 'trialFeedback', message: '试用完成：完成高落差硬降，+20 能量 / +120 分 / 徽章进度 +1', reward: { energy: 20, score: 120, badgeProgress: 1 } });
+    expect(state.latestUpgradeGoal).toContain('再消');
   });
 
   it('freezes gravity during the first reward safety demo window', () => {
@@ -187,10 +188,11 @@ describe('GameState', () => {
     state.command('Skill1');
     expect(state.events).toContainEqual({ type: 'skillFeedback', id: 'line_clearer', message: '行清除器发动', success: true, energySpent: 100 });
     expect(state.events).toContainEqual({ type: 'trialFeedback', message: '试用触发：行清除器已清理底线' });
-    expect(state.events).toContainEqual({ type: 'trialFeedback', message: '试用完成：完成行清除器释放，+20 能量 / 徽章进度 +1', reward: { energy: 20, badgeProgress: 1 } });
+    expect(state.events).toContainEqual({ type: 'trialFeedback', message: '试用完成：完成行清除器释放，+20 能量 / +120 分 / 徽章进度 +1', reward: { energy: 20, score: 120, badgeProgress: 1 } });
     expect(state.score).toBe(120);
     expect(state.firstRewardTrialRemaining).toBe(0);
     expect(state.firstRewardSafetyRemainingMs).toBe(0);
+    expect(state.latestUpgradeGoal).toBe('再消 8 行拿下一奖');
   });
 
   it('exposes opening long-term targets before the first reward', () => {
