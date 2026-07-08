@@ -20,7 +20,7 @@ export type GameEvent =
   | { type: 'lineClear'; lines: number; score: number }
   | { type: 'rewardReady'; options: UpgradeConfig[] }
   | { type: 'upgradeFeedback'; message: string; goal: string }
-  | { type: 'trialFeedback'; message: string; reward?: { energy: number; badgeProgress: number } }
+  | { type: 'trialFeedback'; message: string; reward?: { energy: number; score: number; badgeProgress: number } }
   | { type: 'skillFeedback'; id: string; message: string; success: boolean; energySpent?: number }
   | { type: 'dangerRescue'; message: string }
   | { type: 'safetyWindow'; message: string; durationMs: number }
@@ -624,7 +624,8 @@ export class GameState {
     this.firstRewardSafetyStartedAtMs = undefined;
     this.score += 120;
     this.addEnergy(20);
-    this.events.push({ type: 'trialFeedback', message: `试用完成：${reason}，+20 能量 / 徽章进度 +1`, reward: { energy: 20, badgeProgress: 1 } });
+    this.latestUpgradeGoal = `再消 ${this.linesUntilReward()} 行拿下一奖`;
+    this.events.push({ type: 'trialFeedback', message: `试用完成：${reason}，+20 能量 / +120 分 / 徽章进度 +1`, reward: { energy: 20, score: 120, badgeProgress: 1 } });
   }
 
   private skillCost(id: string): number {
