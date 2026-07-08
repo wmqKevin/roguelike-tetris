@@ -1,12 +1,12 @@
 # 07_TestCases - MVP QA Test Cases
 
-Issue: ZI-109
-Build under test: v0.7 development patch on v0.6.0 base `cbdc67b0`
+Issue: ZI-114
+Build under test: v0.8 development patch on v0.7.0 base `aeab311cd900c0151e1a041bc2761533235427d6`
 Date: 2026-07-08
 
 ## Scope
 
-MVP scope is the leader-approved cut: desktop keyboard first, first 6-8 stages, no full T-Spin, no touch controls, no permanent meta progression. v0.7 adds first-reward safety demonstration, Stage 1-2 newcomer buffer, 520x390 landscape readability, build guidance, and layered peak feedback.
+MVP scope is the leader-approved cut: desktop keyboard first, first 6-8 stages, no full T-Spin, no touch controls, no permanent meta progression. v0.8 adds 520x390 reward/danger information layering, skill release feedback closure, 10-second first reward trial goals, reward build labels, and settlement build-route progress.
 
 ## Test Cases
 
@@ -49,9 +49,14 @@ MVP scope is the leader-approved cut: desktop keyboard first, first 6-8 stages, 
 | TC-035 | Landscape 520 layout | P1 | Unit-test `createLayout(520,390,520)` | Compact landscape board is fixed left and fits vertically | PASS |
 | TC-036 | Build guidance | P1 | Unit-test run-style guidance strings | UPGRADES/current build and next-run build advice are generated | PASS |
 | TC-037 | Peak feedback layers | P1 | Unit-test peak effect labels for first reward/Tetris/skill | Distinct fly-text and shake paths are called | PASS |
+| TC-038 | Landscape reward/danger layering | P0 | Unit-test 520x390 toast/status and reward card geometry | Reward phase suppresses overlapping toast, status copy stays below HUD, and cards fit inside viewport | PASS |
+| TC-039 | Skill three-state feedback | P0 | Unit-test locked/unready/ready line-clearer states plus keyboard bindings | Missing skill reports unavailable, low energy reports `能量不足 100`, ready C cast emits `C 释放最低行清除`; 1/2/3 remain reward-only and Hold is Shift/V | PASS |
+| TC-040 | First reward trial target | P1 | Unit-test first reward 10-second trial and completion reward | Trial text starts at 10s; first successful use completes target and grants +20 energy / +120 score | PASS |
+| TC-041 | Reward card labels | P1 | Unit-test reward labels | Cards expose recommendation, build-core, shortfall, immediate-effect, and skill-unlock labels | PASS |
+| TC-042 | Settlement build route | P1 | Unit-test route text | Settlement route progress renders examples such as `清场流 2/3` and `预判流 1/3` | PASS |
 
 ## Environment
 
 - Node/npm environment in Multica runtime
-- Dev server: Vite on `127.0.0.1:4173`
+- Dev server: Vite on `127.0.0.1:4173` or the next available port
 - Browser automation: Google Chrome headless screenshots are requested for 390x844, 520x390, and 960x720. Interactive reward playthrough remains covered by unit behavior tests plus visual smoke screenshots where browser tooling is available.
