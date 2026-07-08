@@ -57,6 +57,7 @@ export type GameOverPanelCopy = {
   score: number;
   failureReason: string;
   nextRunAdvice: string;
+  nextRunBuildAdvice: string;
   bestPerformance: string;
   runStyle: string;
   nextRunGoal: string;
@@ -90,7 +91,7 @@ export function createGameOverPanelLayout(width: number, height: number, copy: G
   const narrowPortrait = displayWidth <= 520 && height > width;
   const smallLandscape = displayWidth <= 520 && !narrowPortrait;
   const panelW = smallLandscape ? Math.min(width - 28, width <= 520 ? 492 : 860) : Math.min(500, width - 28);
-  const panelH = narrowPortrait ? Math.min(height - 40, 620) : smallLandscape ? Math.min(height - 40, height <= 430 ? 350 : 620) : 470;
+  const panelH = narrowPortrait ? Math.min(height - 40, 620) : smallLandscape ? Math.min(height - 40, height <= 430 ? 350 : 620) : 540;
   const left = width / 2 - panelW / 2 + (narrowPortrait || smallLandscape ? 24 : 40);
   const textWidth = panelW - (narrowPortrait || smallLandscape ? 48 : 80);
 
@@ -100,16 +101,17 @@ export function createGameOverPanelLayout(width: number, height: number, copy: G
       { key: 'score', value: `Score ${copy.score}`, x: left, y: height / 2 - 136, size: 22, color: '#d7f7ff', height: estimateTextHeight(`Score ${copy.score}`, 22) },
       { key: 'failure', value: `失败原因：${copy.failureReason}`, x: left, y: height / 2 - 104, size: 17, color: '#ffde59', height: estimateTextHeight(`失败原因：${copy.failureReason}`, 17) },
       { key: 'advice', value: `下局建议：${copy.nextRunAdvice}`, x: left, y: height / 2 - 78, size: 17, color: '#9befff', textWidth, height: estimateTextHeight(`下局建议：${copy.nextRunAdvice}`, 17, textWidth) },
-      { key: 'best', value: `本局最佳表现：${copy.bestPerformance}`, x: left, y: height / 2 - 48, size: 17, color: '#d7f7ff', textWidth, height: estimateTextHeight(`本局最佳表现：${copy.bestPerformance}`, 17, textWidth) },
-      { key: 'style', value: `本局流派：${copy.runStyle}`, x: left, y: height / 2 - 18, size: 18, color: '#d7f7ff', height: estimateTextHeight(`本局流派：${copy.runStyle}`, 18) },
-      { key: 'goal', value: `下次目标：${copy.nextRunGoal}`, x: left, y: height / 2 + 10, size: 18, color: '#ffde59', height: estimateTextHeight(`下次目标：${copy.nextRunGoal}`, 18) },
-      { key: 'progress', value: copy.progress, x: left, y: height / 2 + 38, size: 18, color: '#ffde59', height: estimateTextHeight(copy.progress, 18) },
-      { key: 'upgrades', value: `本局强化：${copy.upgrades}`, x: left, y: height / 2 + 68, size: 16, color: '#d7f7ff', textWidth, height: estimateTextHeight(`本局强化：${copy.upgrades}`, 16, textWidth) },
-      { key: 'codex', value: `本局新增图鉴 ${copy.codexCount}/12`, x: left, y: height / 2 + 116, size: 16, color: '#ffde59', textWidth, height: estimateTextHeight(`本局新增图鉴 ${copy.codexCount}/12`, 16, textWidth) },
-      { key: 'badge', value: `最高 Stage 徽章 ${copy.badge}`, x: left + 176, y: height / 2 + 116, size: 16, color: '#ffde59', textWidth, height: estimateTextHeight(`最高 Stage 徽章 ${copy.badge}`, 16, textWidth) },
-      { key: 'bestStyle', value: `最佳流派 ${copy.style}`, x: left, y: height / 2 + 140, size: 15, color: '#9befff', textWidth, height: estimateTextHeight(`最佳流派 ${copy.style}`, 15, textWidth) }
+      { key: 'buildAdvice', value: copy.nextRunBuildAdvice, x: left, y: height / 2 - 48, size: 17, color: '#ffde59', textWidth, height: estimateTextHeight(copy.nextRunBuildAdvice, 17, textWidth) },
+      { key: 'best', value: `本局最佳表现：${copy.bestPerformance}`, x: left, y: height / 2 - 18, size: 17, color: '#d7f7ff', textWidth, height: estimateTextHeight(`本局最佳表现：${copy.bestPerformance}`, 17, textWidth) },
+      { key: 'style', value: `本局流派：${copy.runStyle}`, x: left, y: height / 2 + 12, size: 18, color: '#d7f7ff', height: estimateTextHeight(`本局流派：${copy.runStyle}`, 18) },
+      { key: 'goal', value: `下次目标：${copy.nextRunGoal}`, x: left, y: height / 2 + 40, size: 18, color: '#ffde59', height: estimateTextHeight(`下次目标：${copy.nextRunGoal}`, 18) },
+      { key: 'progress', value: copy.progress, x: left, y: height / 2 + 68, size: 18, color: '#ffde59', height: estimateTextHeight(copy.progress, 18) },
+      { key: 'upgrades', value: `本局强化：${copy.upgrades}`, x: left, y: height / 2 + 98, size: 16, color: '#d7f7ff', textWidth, height: estimateTextHeight(`本局强化：${copy.upgrades}`, 16, textWidth) },
+      { key: 'codex', value: `本局新增图鉴 ${copy.codexCount}/12`, x: left, y: height / 2 + 146, size: 16, color: '#ffde59', textWidth, height: estimateTextHeight(`本局新增图鉴 ${copy.codexCount}/12`, 16, textWidth) },
+      { key: 'badge', value: `最高 Stage 徽章 ${copy.badge}`, x: left + 176, y: height / 2 + 146, size: 16, color: '#ffde59', textWidth, height: estimateTextHeight(`最高 Stage 徽章 ${copy.badge}`, 16, textWidth) },
+      { key: 'bestStyle', value: `最佳流派 ${copy.style}`, x: left, y: height / 2 + 170, size: 15, color: '#9befff', textWidth, height: estimateTextHeight(`最佳流派 ${copy.style}`, 15, textWidth) }
     ];
-    return { panelW, panelH, left, lines, retryX: left, retryY: height / 2 + 190, shortcutX: left + 156, shortcutY: height / 2 + 180 };
+    return { panelW, panelH, left, lines, retryX: left, retryY: height / 2 + 230, shortcutX: left + 156, shortcutY: height / 2 + 220 };
   }
 
   if (smallLandscape) {
@@ -128,7 +130,8 @@ export function createGameOverPanelLayout(width: number, height: number, copy: G
     pushColumn(left, 'score', `Score ${copy.score}`, width <= 520 ? 17 : 22, '#d7f7ff', false);
     pushColumn(left, 'failure', `失败原因：${copy.failureReason}`, width <= 520 ? 13 : 16, '#ffde59');
     pushColumn(left, 'advice', `下局建议：${copy.nextRunAdvice}`, width <= 520 ? 13 : 16, '#9befff');
-    pushColumn(left, 'best', `本局最佳表现：${copy.bestPerformance}`, width <= 520 ? 13 : 16, '#d7f7ff');
+    pushColumn(left, 'buildAdvice', copy.nextRunBuildAdvice, width <= 520 ? 13 : 16, '#ffde59');
+    pushColumn(left, 'best', `本局最佳表现：${copy.bestPerformance}`, width <= 520 ? 12 : 16, '#d7f7ff');
     pushColumn(right, 'style', `本局流派：${copy.runStyle}`, width <= 520 ? 13 : 16, '#d7f7ff');
     pushColumn(right, 'goal', `下次目标：${copy.nextRunGoal}`, width <= 520 ? 13 : 16, '#ffde59');
     pushColumn(right, 'progress', copy.progress, width <= 520 ? 13 : 16, '#ffde59');
@@ -154,6 +157,7 @@ export function createGameOverPanelLayout(width: number, height: number, copy: G
   push('score', `Score ${copy.score}`, 20, '#d7f7ff', false);
   push('failure', `失败原因：${copy.failureReason}`, 15, '#ffde59');
   push('advice', `下局建议：${copy.nextRunAdvice}`, 15, '#9befff');
+  push('buildAdvice', copy.nextRunBuildAdvice, 15, '#ffde59');
   push('best', `本局最佳表现：${copy.bestPerformance}`, 15, '#d7f7ff');
   push('style', `本局流派：${copy.runStyle}`, 15, '#d7f7ff');
   push('goal', `下次目标：${copy.nextRunGoal}`, 15, '#ffde59');
@@ -205,6 +209,8 @@ export class HudRenderer {
     state.ownedUpgrades.slice(-6).forEach((upgrade, index) => {
       this.text(layout.sideLeftX, layout.boardY + 172 + index * 25, `${index + 1}. ${upgrade.name}`, 16, '#d7f7ff');
     });
+    this.text(layout.sideLeftX, layout.boardY + 330, state.currentBuildGuidanceText().replace('｜', '\n'), 15, '#ffde59')
+      .setWordWrapWidth(160);
 
     this.label(layout.sideRightX, layout.boardY, 'NEXT');
     state.preview().slice(0, 4).forEach((piece: PieceType, index) => {
@@ -227,7 +233,8 @@ export class HudRenderer {
     this.stat(x, y, 'ENERGY', `${Math.floor(state.energy)} / 200`, highlight || 200 - state.energy <= 20 ? '#ffde59' : '#ffffff');
     this.energyBar(x, y + 36, state.energy / 200, ui.nowMs);
     if (state.lowPressurePiecesRemaining > 0) this.text(layout.boardX, layout.boardY + layout.cell * 20 + 42, `低压缓冲 ${state.lowPressurePiecesRemaining} 块`, 16, '#ffde59');
-    if (state.latestUpgradeGoal) this.text(layout.boardX, layout.boardY + layout.cell * 20 + 68, state.latestUpgradeGoal, 16, '#9befff');
+    if (state.dangerHintText) this.text(layout.boardX, layout.boardY + layout.cell * 20 + 68, state.dangerHintText, 16, '#ffde59').setWordWrapWidth(layout.cell * 10);
+    else if (state.latestUpgradeGoal) this.text(layout.boardX, layout.boardY + layout.cell * 20 + 68, state.latestUpgradeGoal, 16, '#9befff');
   }
 
   private compactHud(state: GameState, layout: Layout, highScore: number, ui: HudUiState): void {
@@ -238,43 +245,51 @@ export class HudRenderer {
     this.text(246, topY, `Best ${highScore}`, 16, '#75a7ba');
     this.text(14, topY + 24, `目标 ${state.linesInStage}/${state.linesUntilReward() + state.linesInStage}`, 16, highlight ? '#ffde59' : '#d7f7ff');
     this.text(136, topY + 24, `能量 ${Math.floor(state.energy)}/200`, 16, highlight || 200 - state.energy <= 20 ? '#ffde59' : '#ffffff');
-    this.energyBar(Math.max(206, this.scene.scale.width - 184), topY + 34, state.energy / 200, ui.nowMs);
-    const trayY = layout.portrait ? Math.min(this.scene.scale.height - 68, layout.boardY + layout.cell * 20 + 24) : layout.boardY - 32;
-    this.label(14, trayY, 'HOLD');
-    if (state.hold) this.boardRenderer.drawMiniPiece(state.hold, 70, trayY + 14, 12);
-    this.label(layout.boardX + layout.cell * 10 - 118, trayY, 'NEXT');
-    state.preview().slice(0, 2).forEach((piece: PieceType, index) => {
-      const x = layout.boardX + layout.cell * 10 - 58 + index * 48;
-      const y = trayY + 14;
-      if (index === 0 && ui.firstRewardDemo?.effect === 'preview_plus' && ui.nowMs < ui.firstRewardDemo.untilMs) {
-        const pulse = 0.55 + Math.sin(ui.nowMs / 70) * 0.25;
-        const bg = this.scene.add.rectangle(x + 18, y + 18, 48, 42, 0x00e5ff, pulse).setStrokeStyle(2, 0xffde59, 0.8);
-        this.cards.push(this.scene.add.container(0, 0, [bg]));
-      }
-      this.boardRenderer.drawMiniPiece(piece, x, y, 12, index === 0 && ui.firstRewardDemo?.effect === 'preview_plus' && ui.nowMs < ui.firstRewardDemo.untilMs ? 1 : 0.9);
-    });
+    this.energyBar(Math.max(206, this.scene.scale.width - 184), layout.portrait ? topY + 54 : topY + 34, state.energy / 200, ui.nowMs);
+    if (layout.portrait) {
+      const trayY = Math.min(this.scene.scale.height - 68, layout.boardY + layout.cell * 20 + 24);
+      this.label(14, trayY, 'HOLD');
+      if (state.hold) this.boardRenderer.drawMiniPiece(state.hold, 70, trayY + 14, 12);
+      this.label(layout.boardX + layout.cell * 10 - 118, trayY, 'NEXT');
+      state.preview().slice(0, 2).forEach((piece: PieceType, index) => {
+        const x = layout.boardX + layout.cell * 10 - 58 + index * 48;
+        const y = trayY + 14;
+        if (index === 0 && ui.firstRewardDemo?.effect === 'preview_plus' && ui.nowMs < ui.firstRewardDemo.untilMs) {
+          const pulse = 0.55 + Math.sin(ui.nowMs / 70) * 0.25;
+          const bg = this.scene.add.rectangle(x + 18, y + 18, 48, 42, 0x00e5ff, pulse).setStrokeStyle(2, 0xffde59, 0.8);
+          this.cards.push(this.scene.add.container(0, 0, [bg]));
+        }
+        this.boardRenderer.drawMiniPiece(piece, x, y, 12, index === 0 && ui.firstRewardDemo?.effect === 'preview_plus' && ui.nowMs < ui.firstRewardDemo.untilMs ? 1 : 0.9);
+      });
+    }
     const goalY = layout.portrait ? this.scene.scale.height - 30 : 62;
     if (state.firstRewardTrialRemaining > 0) this.text(14, goalY, `${state.firstRewardTrialText}（剩 ${state.firstRewardTrialRemaining}）`, 14, '#ffde59').setWordWrapWidth(this.scene.scale.width - 28);
+    else if (state.dangerHintText) this.text(14, goalY, state.dangerHintText, 15, '#ffde59').setWordWrapWidth(this.scene.scale.width - 28);
     else if (state.lowPressurePiecesRemaining > 0) this.text(14, goalY, `低压缓冲 ${state.lowPressurePiecesRemaining} 块`, 15, '#ffde59');
     else if (state.latestUpgradeGoal) this.text(14, goalY, state.latestUpgradeGoal, 15, '#9befff').setWordWrapWidth(360);
+    if (!layout.portrait) {
+      const x = layout.boardX + layout.cell * 10 + 14;
+      this.text(x, 62, state.currentBuildGuidanceText(), 14, '#ffde59').setWordWrapWidth(this.scene.scale.width - x - 10);
+    }
   }
 
   private rewardCards(state: GameState, layout: Layout): void {
     const narrow = layout.compactHud;
-    const cardW = narrow ? Math.max(112, Math.floor((this.scene.scale.width - 34) / 3)) : 200;
-    const cardH = narrow ? 214 : 230;
-    const gap = narrow ? 7 : 20;
-    const startX = narrow ? 12 + cardW / 2 : layout.boardX - 170;
+    const compactLandscape = narrow && !layout.portrait;
+    const cardW = compactLandscape ? Math.max(132, Math.floor((this.scene.scale.width - (layout.boardX + layout.cell * 10) - 44) / 2)) : narrow ? Math.max(112, Math.floor((this.scene.scale.width - 34) / 3)) : 200;
+    const cardH = compactLandscape ? 142 : narrow ? 214 : 230;
+    const gap = compactLandscape ? 8 : narrow ? 7 : 20;
+    const startX = compactLandscape ? layout.boardX + layout.cell * 10 + 18 + cardW / 2 : narrow ? 12 + cardW / 2 : layout.boardX - 170;
     state.rewardOptions.forEach((upgrade, index) => {
-      const x = startX + index * (cardW + gap);
-      const y = narrow ? Math.max(190, layout.boardY + 98) : layout.boardY + 150;
+      const x = compactLandscape ? startX + (index % 2) * (cardW + gap) : startX + index * (cardW + gap);
+      const y = compactLandscape ? 138 + Math.floor(index / 2) * (cardH + gap) : narrow ? Math.max(190, layout.boardY + 98) : layout.boardY + 150;
       const card = this.scene.add.container(x, y);
       const bg = this.scene.add.rectangle(0, 0, cardW, cardH, 0x111a32, 0.96).setStrokeStyle(2, 0x00e5ff, 0.8);
       const textW = cardW - 24;
-      const title = this.scene.add.text(-textW / 2, -cardH / 2 + 18, `${index + 1}. ${upgrade.name}`, { fontSize: narrow ? '15px' : '18px', color: '#ffffff', fontStyle: '700', wordWrap: { width: textW } });
-      const rarity = this.scene.add.text(-textW / 2, -cardH / 2 + 64, upgrade.rarity.toUpperCase(), { fontSize: '12px', color: '#ffde59' });
-      const body = this.scene.add.text(-textW / 2, -cardH / 2 + 91, upgrade.description, { fontSize: narrow ? '13px' : '15px', color: '#d7f7ff', wordWrap: { width: textW } });
-      const demo = this.scene.add.text(-textW / 2, cardH / 2 - 58, this.rewardDemoCopy(upgrade.effect), { fontSize: narrow ? '12px' : '13px', color: '#ffde59', wordWrap: { width: textW } });
+      const title = this.scene.add.text(-textW / 2, -cardH / 2 + 14, `${index + 1}. ${upgrade.name}`, { fontSize: compactLandscape ? '16px' : narrow ? '15px' : '18px', color: '#ffffff', fontStyle: '700', wordWrap: { width: textW } });
+      const rarity = this.scene.add.text(-textW / 2, -cardH / 2 + (compactLandscape ? 40 : 64), upgrade.rarity.toUpperCase(), { fontSize: '12px', color: '#ffde59' });
+      const body = this.scene.add.text(-textW / 2, -cardH / 2 + (compactLandscape ? 60 : 91), upgrade.description, { fontSize: compactLandscape ? '14px' : narrow ? '13px' : '15px', color: '#d7f7ff', wordWrap: { width: textW } });
+      const demo = this.scene.add.text(-textW / 2, cardH / 2 - (compactLandscape ? 36 : 58), this.rewardDemoCopy(upgrade.effect), { fontSize: compactLandscape ? '13px' : narrow ? '12px' : '13px', color: '#ffde59', wordWrap: { width: textW } });
       const hint = this.scene.add.text(-textW / 2, cardH / 2 - 25, '1/2/3 或点击', { fontSize: '12px', color: '#9befff' });
       card.add([bg, title, rarity, body, demo, hint]);
       card.setSize(cardW, cardH).setInteractive({ useHandCursor: true });
@@ -302,12 +317,13 @@ export class HudRenderer {
     const parts = [`再消 ${remaining} 行`, `攒满能量 ${Math.ceil(energy)}`];
     if (Number.isFinite(pieces)) parts.push(`落 ${pieces} 块`);
     if (layout.compactHud) {
-      const y = layout.portrait ? 56 : 82;
-      this.text(14, y, remaining > 0 ? `目标：再消 ${remaining} 行` : '目标：选择强化继续推进', 15, color).setWordWrapWidth(Math.max(220, this.scene.scale.width - 28));
+      const x = layout.portrait ? 14 : layout.boardX + layout.cell * 10 + 14;
+      const y = layout.portrait ? 72 : 96;
+      this.text(x, y, remaining > 0 ? `目标：再消 ${remaining} 行` : '目标：选择强化继续推进', 15, color).setWordWrapWidth(layout.portrait ? Math.max(220, this.scene.scale.width - 28) : this.scene.scale.width - x - 10);
       const alternates = parts.slice(1);
       if (alternates.length > 0) {
         const alt = alternates[Math.floor(nowMs / 1100) % alternates.length];
-        this.text(14, y + 20, `或 ${alt}`, 12, '#75a7ba').setWordWrapWidth(Math.max(220, this.scene.scale.width - 28));
+        this.text(x, y + 20, `或 ${alt}`, 12, '#75a7ba').setWordWrapWidth(layout.portrait ? Math.max(220, this.scene.scale.width - 28) : this.scene.scale.width - x - 10);
       }
     } else {
       const goal = remaining > 0 || energy > 0 || pieces > 0 ? `目标：${parts.join(' / ')} 即可选择强化` : '目标：选择强化继续推进';
@@ -348,6 +364,7 @@ export class HudRenderer {
       score: state.score,
       failureReason: state.failureReasonText(),
       nextRunAdvice: state.nextRunAdviceText(),
+      nextRunBuildAdvice: state.nextRunBuildAdviceText(),
       bestPerformance: state.bestPerformanceText(),
       runStyle: state.runStyleLabel(),
       nextRunGoal: state.nextRunGoalText(),
