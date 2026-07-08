@@ -189,4 +189,19 @@ describe('GameState', () => {
     expect(modifiers.skills).toContain('line_clearer');
     expect(modifiers.skills).toContain('i_call');
   });
+
+  it('returns targeted next-run advice from failure patterns', () => {
+    const state = new GameState('advice');
+
+    state.centerPressureLocks = 3;
+    expect(state.nextRunAdviceText()).toContain('减少中路堆叠');
+
+    state.centerPressureLocks = 0;
+    state.rightWellBlockedLocks = 3;
+    expect(state.nextRunAdviceText()).toContain('优先清右侧井口');
+
+    state.rightWellBlockedLocks = 0;
+    state.noClearHardDrops = 5;
+    expect(state.nextRunAdviceText()).toContain('连续无消行硬降');
+  });
 });
