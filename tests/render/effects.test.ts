@@ -22,6 +22,19 @@ describe('line clear feedback profile', () => {
 });
 
 describe('first reward demo effects', () => {
+  it('defines staggered skill release and trial reward timing windows', async () => {
+    const { feedbackScheduleFor } = await import('../../src/scenes/feedbackSchedule');
+
+    expect(feedbackScheduleFor({ type: 'skillFeedback', id: 'line_clearer', message: '行清除器发动', success: true, energySpent: 100 })).toEqual([
+      { kind: 'pause', delayMs: 0 },
+      { kind: 'skillPeak', delayMs: 220 },
+      { kind: 'energySpent', delayMs: 920 }
+    ]);
+    expect(feedbackScheduleFor({ type: 'trialFeedback', message: '试用完成', reward: { energy: 20, score: 120, badgeProgress: 1 } })).toEqual([
+      { kind: 'trialReward', delayMs: 360 }
+    ]);
+  });
+
   it('plays the skill reward demo with flash, pulse, and release copy', async () => {
     const { Effects } = await import('../../src/render/effects');
     const createdTexts: string[] = [];
@@ -90,9 +103,10 @@ describe('first reward demo effects', () => {
     effects.firstRewardPeak();
     effects.tetrisPeak();
     effects.skillPeak();
+    effects.skillReleasePause();
 
     expect(createdTexts).toEqual(expect.arrayContaining(['首奖生效', 'TETRIS!', '技能释放']));
-    expect(scene.cameras.main.shake).toHaveBeenCalledTimes(3);
+    expect(scene.cameras.main.shake).toHaveBeenCalledTimes(4);
   });
 
   it('adds a bottom-row sweep for successful line-clearer casts', async () => {
