@@ -19,6 +19,10 @@ export class GameScene extends Phaser.Scene {
   private audio = new AudioManager();
   private saveData!: SaveData;
   private toast?: { message: string; untilMs: number };
+  private skillWarning?: { message: string; skillId?: string; untilMs: number; shakeUntilMs: number };
+  private trialRewardStrip?: { message: string; untilMs: number };
+  private energyRefillUntilMs = 0;
+  private feedbackQueueAvailableMs = 0;
   private highlightUntilMs = 0;
   private firstRewardDemo?: { effect: UpgradeEffect; untilMs: number };
   private tutorialEnabled = true;
@@ -57,6 +61,9 @@ export class GameScene extends Phaser.Scene {
       nowMs: this.time.now,
       toast: this.toast,
       highlightUntilMs: this.highlightUntilMs,
+      energyRefillUntilMs: this.energyRefillUntilMs,
+      skillWarning: this.skillWarning,
+      trialRewardStrip: this.trialRewardStrip,
       firstRewardDemo: this.firstRewardDemo && this.time.now < this.firstRewardDemo.untilMs
         ? this.firstRewardDemo
         : undefined,
@@ -123,19 +130,41 @@ export class GameScene extends Phaser.Scene {
       }
       if (event.type === 'trialFeedback') {
         const layout = createLayout(this.scale.width, this.scale.height, this.displayWidth());
-        this.effects.floatingText(event.message, layout.boardX + layout.cell * 5, layout.boardY + layout.cell * 3);
-        this.toast = { message: event.message, untilMs: this.time.now + 2400 };
-        this.highlightUntilMs = this.time.now + 2400;
+        if (event.reward) {
+          this.enqueueFeedback(() => {
+            this.trialRewardStrip = { message: '试用完成 +20 能量 / +120 分 / 徽章进度 +1', untilMs: this.time.now + 2000 };
+            this.energyRefillUntilMs = this.time.now + 900;
+            this.highlightUntilMs = this.time.now + 2200;
+            this.toast = { message: event.message, untilMs: this.time.now + 1800 };
+          }, 360);
+        } else {
+          this.enqueueFeedback(() => {
+            this.effects.floatingText(event.message, layout.boardX + layout.cell * 5, layout.boardY + layout.cell * 3);
+            this.toast = { message: event.message, untilMs: this.time.now + 1800 };
+            this.highlightUntilMs = this.time.now + 1800;
+          });
+        }
       }
       if (event.type === 'skillFeedback') {
         const layout = createLayout(this.scale.width, this.scale.height, this.displayWidth());
         if (event.success) {
-          this.effects.skillPeak(event.message);
-          this.effects.bottomRowSweep(layout);
+          this.effects.skillReleasePause();
+          this.enqueueFeedback(() => {
+            this.effects.skillPeak(event.message);
+            this.effects.bottomRowSweep(layout);
+            this.toast = { message: event.message, untilMs: this.time.now + 1500 };
+          }, 220);
+          if (event.energySpent) {
+            this.enqueueFeedback(() => {
+              this.effects.floatingText(`-${event.energySpent}`, layout.boardX + layout.cell * 8.3, layout.boardY + layout.cell * 18.5, '#ff4f78', 620);
+              this.highlightUntilMs = this.time.now + 900;
+            }, 920);
+          }
         } else {
+          this.skillWarning = { message: event.message, skillId: event.id === 'empty' ? undefined : event.id, untilMs: this.time.now + 1600, shakeUntilMs: this.time.now + 250 };
           this.effects.floatingText(event.message, layout.boardX + layout.cell * 8.3, layout.boardY + layout.cell * 18.5, '#ff4f78');
+          this.toast = { message: event.message, untilMs: this.time.now + 1200 };
         }
-        this.toast = { message: event.message, untilMs: this.time.now + (event.success ? 2200 : 1800) };
         this.highlightUntilMs = this.time.now + 2200;
       }
       if (event.type === 'dangerRescue' || event.type === 'safetyWindow') {
@@ -161,6 +190,10 @@ export class GameScene extends Phaser.Scene {
     this.tutorialEnabled = false;
     this.usedTutorialActions.clear();
     this.toast = undefined;
+    this.skillWarning = undefined;
+    this.trialRewardStrip = undefined;
+    this.energyRefillUntilMs = 0;
+    this.feedbackQueueAvailableMs = 0;
     this.highlightUntilMs = 0;
     this.firstRewardDemo = undefined;
     this.runRecorded = false;
@@ -203,5 +236,11 @@ export class GameScene extends Phaser.Scene {
   private displayWidth(): number {
     const canvasWidth = this.sys.game.canvas?.getBoundingClientRect().width;
     return canvasWidth && canvasWidth > 0 ? canvasWidth : this.scale.displaySize.width || window.innerWidth || this.scale.width;
+  }
+
+  private enqueueFeedback(action: () => void, earliestDelayMs = 0, gapMs = 380): void {
+    const startAtMs = Math.max(this.time.now + earliestDelayMs, this.feedbackQueueAvailableMs);
+    this.feedbackQueueAvailableMs = startAtMs + gapMs;
+    this.time.delayedCall(Math.max(0, startAtMs - this.time.now), action);
   }
 }
