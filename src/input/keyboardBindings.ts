@@ -13,12 +13,15 @@ export const KEYBOARD_BINDINGS: Record<string, InputCommand> = {
   KeyK: 'RotateCW',
   KeyZ: 'RotateCCW',
   KeyJ: 'RotateCCW',
-  KeyC: 'Hold',
+  KeyC: 'Skill1',
+  KeyV: 'Hold',
   ShiftLeft: 'Hold',
   ShiftRight: 'Hold',
   Escape: 'Pause',
   KeyP: 'Pause',
-  Digit1: 'Skill1',
-  Digit2: 'Skill2',
-  Digit3: 'Skill3'
+  Digit1: 'Reward1',
+  Digit2: 'Reward2',
+  Digit3: 'Reward3',
+  KeyF: 'Skill2',
+  KeyG: 'Skill3'
 };
