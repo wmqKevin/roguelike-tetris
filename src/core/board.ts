@@ -72,6 +72,11 @@ export class Board {
     return { lines, cleared: lines.length, bombCells };
   }
 
+  clearLowestVisibleRow(): void {
+    this.cells.splice((this.height - 1) * this.width, this.width);
+    this.cells.unshift(...Array.from({ length: this.width }, emptyCell));
+  }
+
   addGarbageRows(count: number, holeColumn: number): void {
     for (let i = 0; i < count; i += 1) {
       this.cells.splice(0, this.width);
