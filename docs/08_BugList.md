@@ -16,6 +16,7 @@ Date: 2026-07-07
 | BUG-006 | P1 | Development | Was Yes | 已修 - ZI-87 QA 复测通过 |
 | BUG-007 | P1 | Development | Was Yes | Fixed for v0.5 |
 | BUG-008 | P1 | Development | Was Yes | 已修 - ZI-92 QA 复测通过 |
+| BUG-009 | P1 | Development | Was Yes | 已修 - ZI-103 第 2 轮热修 |
 
 ## BUG-001 - npm audit reports high/critical vulnerabilities in dev toolchain
 
@@ -211,3 +212,51 @@ ZI-92 hotfix retest passed:
 - Independent mocked reproduction now returns `{"highScore":100,"bestStage":2,"upgrades":["stable_preview"],"badges":[2],"style":"清场流"}` without throwing.
 - `npm run build` passed.
 - `npm audit --audit-level=high` found 0 vulnerabilities.
+
+## BUG-009 - 390px Game Over settlement panel overlaps after v0.6 advice/codex additions
+
+Severity: P1
+Owner: Development
+Blocks release: Was Yes
+Status: 已修 - ZI-103 第 2 轮热修
+
+### Evidence
+
+ZI-100 v0.6 real Chrome QA applied `ZI-101-v0.6.patch` on v0.5.0 base `dd908900` and drove a 390x844 portrait run into Game Over with real keyboard events.
+
+The v0.6 terminal panel now includes failure reason, next-run advice, best performance, run style, next target, codex count, highest Stage badge, best style, and retry controls. At 390px portrait these rows overlapped:
+
+- `本局最佳表现`, `本局流派`, `下次目标`, and progress text collided vertically.
+- `本局新增图鉴` / `最高 Stage 徽章` / `最佳流派` collided with the retry button area.
+- The retry button visually covered lower summary text, so the required settlement-panel recommendation/codex/badge presentation was not readable.
+
+### Reproduction
+
+1. Apply `ZI-101-v0.6.patch` on `dd908900`.
+2. Run `npm run dev -- --host 127.0.0.1 --port 5176`.
+3. Open Chrome at 390x844.
+4. Use hard drop repeatedly until Game Over.
+5. Observe the Game Over panel text and retry area overlap.
+
+### Expected
+
+The 390px portrait Game Over panel should keep the new v0.6 advice, codex, badge, and retry controls readable without overlap. If content exceeds the available height, use a compact portrait layout, reduced row count, scrolling panel, or separated sections.
+
+### Actual
+
+Before ZI-102, the settlement panel was readable only in parts; multiple v0.6 rows overlapped and the retry control occluded progress text. This blocked v0.6 release because the required Game Over advice/codex/badge UX was broken on the main mobile viewport.
+
+### Resolution
+
+ZI-102 replaced the 390px portrait terminal panel's fixed Y coordinates with a compact measured vertical stack. Wrapped failure/advice/summary/codex rows reserve estimated height, the panel grows within the portrait viewport, and the retry button is placed after the content with bottom padding. The retry label draw order is also fixed so the button text stays visible.
+
+ZI-103 completes the second-round BUG-009 hotfix after ZI-100 retest found two layout leftovers. The portrait advice row now has an explicit wrapping assertion within the 390px panel width, and small landscape displays use a dedicated two-column terminal panel instead of the tall desktop stack. The true portrait branch remains gated by `displayWidth <= 520 && height > width`, so 520x390 landscape is not routed through portrait layout while still getting a short-height terminal layout. The 960x720 desktop terminal coordinates remain stable.
+
+### Regression
+
+ZI-103 hotfix verification:
+
+- `npm test`: terminal panel coverage asserts the 390x844 summary stack stays above the retry button, 390 advice wraps inside the panel, 520x390 landscape uses two clean columns, and 960x720 coordinates remain stable.
+- `npm run build`: passed.
+- `npm audit --audit-level=high`: 0 vulnerabilities.
+- `git apply --check` against base `dd908900`: passed for the final v0.6 hotfix patch.
