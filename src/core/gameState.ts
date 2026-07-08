@@ -20,8 +20,8 @@ export type GameEvent =
   | { type: 'lineClear'; lines: number; score: number }
   | { type: 'rewardReady'; options: UpgradeConfig[] }
   | { type: 'upgradeFeedback'; message: string; goal: string }
-  | { type: 'trialFeedback'; message: string }
-  | { type: 'skillFeedback'; id: string; message: string; success: boolean }
+  | { type: 'trialFeedback'; message: string; reward?: { energy: number; badgeProgress: number } }
+  | { type: 'skillFeedback'; id: string; message: string; success: boolean; energySpent?: number }
   | { type: 'dangerRescue'; message: string }
   | { type: 'safetyWindow'; message: string; durationMs: number }
   | { type: 'stageStart'; stage: number }
@@ -32,6 +32,7 @@ export type GameEvent =
 export const FIRST_REWARD_SAFETY_MS = 1500;
 export const FIRST_REWARD_TRIAL_MS = 10000;
 export const NEWCOMER_GRAVITY_MULTIPLIER = 1.25;
+export const FIRST_REWARD_SKILL_SAFETY_MS = 8000;
 
 function defaultNowMs(): number {
   return globalThis.performance?.now?.() ?? Date.now();
@@ -70,6 +71,7 @@ export class GameState {
   firstRewardTrialRemainingMs = 0;
   firstRewardTrialText = '';
   firstRewardTrialCompleted = false;
+  firstRewardSkillCastRequired = false;
   firstRewardSafetyRemainingMs = 0;
   private firstRewardSafetyStartedAtMs: number | undefined;
   newcomerRescueUsed = false;
@@ -209,6 +211,12 @@ export class GameState {
     return '下局构筑：优先拿硬降收益 / Next 预览 / 技能清行';
   }
 
+  openingGoalText(): string {
+    const codexProgress = Math.min(12, this.ownedUpgrades.length);
+    const badgeTarget = Math.min(this.highestStageReached + 1, STAGES.length);
+    return `本局推荐流派：清场流｜可解锁徽章：Stage ${badgeTarget}｜图鉴进度 ${codexProgress}/12`;
+  }
+
   step(deltaMs: number): void {
     if (this.phase !== 'playing') return;
     if (this.firstRewardTrialRemainingMs > 0) this.firstRewardTrialRemainingMs = Math.max(0, this.firstRewardTrialRemainingMs - deltaMs);
@@ -269,9 +277,15 @@ export class GameState {
     if (isFirstReward) this.startFirstRewardTrial(upgrade);
     this.phase = 'playing';
     if (isFirstReward) {
-      this.firstRewardSafetyRemainingMs = FIRST_REWARD_SAFETY_MS;
+      const skillTrial = upgrade.effect === 'line_clear_skill' || upgrade.effect === 'i_call_skill';
+      this.firstRewardSkillCastRequired = skillTrial;
+      this.firstRewardSafetyRemainingMs = skillTrial ? FIRST_REWARD_SKILL_SAFETY_MS : FIRST_REWARD_SAFETY_MS;
       this.firstRewardSafetyStartedAtMs = this.nowMs();
-      this.events.push({ type: 'safetyWindow', message: '安全演示 1.5 秒：奖励已生效，危险暂停', durationMs: FIRST_REWARD_SAFETY_MS });
+      this.events.push({
+        type: 'safetyWindow',
+        message: skillTrial ? '安全试用：按 C 释放前危险暂停' : '安全演示 1.5 秒：奖励已生效，危险暂停',
+        durationMs: this.firstRewardSafetyRemainingMs
+      });
     }
     this.spawn(this.demoPieceFor(upgrade));
   }
@@ -548,7 +562,7 @@ export class GameState {
   private skillBlockedReason(cost: number): string | undefined {
     this.syncFirstRewardSafetyWindow();
     if (this.phase !== 'playing') return '当前不能释放';
-    if (this.firstRewardSafetyRemainingMs > 0) return '安全演示中，稍后释放';
+    if (this.firstRewardSafetyRemainingMs > 0 && !this.firstRewardSkillCastRequired) return '安全演示中，稍后释放';
     if (this.energy < cost) return `能量不足 ${cost}`;
     return undefined;
   }
@@ -559,6 +573,7 @@ export class GameState {
       return;
     }
     if (this.firstRewardSafetyStartedAtMs === undefined) return;
+    if (this.firstRewardSkillCastRequired) return;
     if (this.nowMs() - this.firstRewardSafetyStartedAtMs >= FIRST_REWARD_SAFETY_MS) {
       this.firstRewardSafetyRemainingMs = 0;
       this.firstRewardSafetyStartedAtMs = undefined;
@@ -580,7 +595,7 @@ export class GameState {
       this.energy -= cost;
       const y = this.board.height - 1;
       for (let x = 0; x < this.board.width; x += 1) this.board.set(x, y, { kind: 'empty' });
-      this.events.push({ type: 'skillFeedback', id, message: 'C 释放最低行清除', success: true });
+      this.events.push({ type: 'skillFeedback', id, message: '行清除器发动', success: true, energySpent: cost });
       this.events.push({ type: 'skill', id });
       if (this.firstRewardTrialRemaining > 0) {
         this.events.push({ type: 'trialFeedback', message: '试用触发：行清除器已清理底线' });
@@ -590,7 +605,7 @@ export class GameState {
     if (id === 'i_call') {
       this.energy -= cost;
       this.bag.forceNext('I');
-      this.events.push({ type: 'skillFeedback', id, message: '释放成功：下一块已指定为 I', success: true });
+      this.events.push({ type: 'skillFeedback', id, message: '长条呼叫发动', success: true, energySpent: cost });
       this.events.push({ type: 'skill', id });
       if (this.firstRewardTrialRemaining > 0) {
         this.events.push({ type: 'trialFeedback', message: '试用触发：下一块已指定为 I' });
@@ -604,9 +619,12 @@ export class GameState {
     this.firstRewardTrialCompleted = true;
     this.firstRewardTrialRemaining = 0;
     this.firstRewardTrialRemainingMs = 0;
+    this.firstRewardSkillCastRequired = false;
+    this.firstRewardSafetyRemainingMs = 0;
+    this.firstRewardSafetyStartedAtMs = undefined;
     this.score += 120;
     this.addEnergy(20);
-    this.events.push({ type: 'trialFeedback', message: `试用完成：${reason}，+20 能量 / +120 分` });
+    this.events.push({ type: 'trialFeedback', message: `试用完成：${reason}，+20 能量 / 徽章进度 +1`, reward: { energy: 20, badgeProgress: 1 } });
   }
 
   private skillCost(id: string): number {
