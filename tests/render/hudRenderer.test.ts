@@ -109,6 +109,7 @@ describe('HudRenderer terminal panel', () => {
       score: 12880,
       failureReason: '顶部锁死，左侧留空不足导致连续堆叠压线',
       nextRunAdvice: '减少中路堆叠，优先保持右侧井口，下一局先拿预览或低压缓冲强化',
+      nextRunBuildAdvice: '下局构筑：优先拿硬降收益 / Next 预览 / 技能清行',
       bestPerformance: 'Stage 4 / 连续消行 7 / 最高能量 196',
       runStyle: '清场流',
       nextRunGoal: '差 1 行进入 Stage 5',
@@ -144,6 +145,7 @@ describe('HudRenderer terminal panel', () => {
       score: 12880,
       failureReason: '顶部锁死，左侧留空不足导致连续堆叠压线',
       nextRunAdvice: '减少中路堆叠，优先保持右侧井口，下一局先拿预览或低压缓冲强化',
+      nextRunBuildAdvice: '下局构筑：优先拿硬降收益 / Next 预览 / 技能清行',
       bestPerformance: 'Stage 4 / 连续消行 7 / 最高能量 196',
       runStyle: '清场流',
       nextRunGoal: '差 1 行进入 Stage 5',
@@ -185,6 +187,7 @@ describe('HudRenderer terminal panel', () => {
       score: 777,
       failureReason: '顶部锁死',
       nextRunAdvice: '优先清右侧井口',
+      nextRunBuildAdvice: '下局构筑：优先拿硬降收益 / Next 预览 / 技能清行',
       bestPerformance: 'Stage 2',
       runStyle: '基础挑战',
       nextRunGoal: '差 2 行进入 Stage 3',
@@ -196,8 +199,8 @@ describe('HudRenderer terminal panel', () => {
     });
 
     expect(layout.panelW).toBe(500);
-    expect(layout.panelH).toBe(470);
-    expect(layout.retryY).toBe(550);
+    expect(layout.panelH).toBe(540);
+    expect(layout.retryY).toBe(590);
     expect(layout.lines.find((line) => line.key === 'title')?.y).toBe(180);
     expect(layout.lines.find((line) => line.key === 'badge')?.x).toBe(layout.left + 176);
     expect(Math.max(...layout.lines.map((line) => line.y + line.height))).toBeLessThanOrEqual(layout.retryY - 28);
@@ -227,8 +230,18 @@ describe('toast layout', () => {
 describe('responsive layout', () => {
   it('uses displayed width for the compact HUD breakpoint', () => {
     expect(createLayout(1280, 720, 390).compactHud).toBe(true);
-    expect(createLayout(1280, 720, 520).compactHud).toBe(false);
+    expect(createLayout(1280, 720, 520).compactHud).toBe(true);
     expect(createLayout(1280, 720, 521).compactHud).toBe(false);
+  });
+
+  it('fixes the board on the left for 520x390 landscape', () => {
+    const layout = createLayout(520, 390, 520);
+
+    expect(layout.compactHud).toBe(true);
+    expect(layout.portrait).toBe(false);
+    expect(layout.boardX).toBe(14);
+    expect(layout.boardY + layout.cell * 20).toBeLessThanOrEqual(390);
+    expect(layout.cell).toBeGreaterThanOrEqual(14);
   });
 
   it('expands the board for narrow portrait viewports', () => {
