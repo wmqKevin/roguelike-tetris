@@ -69,9 +69,9 @@ export class GameScene extends Phaser.Scene {
 
   private handleCommand(command: InputCommand): void {
     if (this.state.phase === 'reward') {
-      if (command === 'Skill1') this.pick(0);
-      if (command === 'Skill2') this.pick(1);
-      if (command === 'Skill3') this.pick(2);
+      if (command === 'Reward1') this.pick(0);
+      if (command === 'Reward2') this.pick(1);
+      if (command === 'Reward3') this.pick(2);
       return;
     }
     this.audio.playMusic();
@@ -126,6 +126,12 @@ export class GameScene extends Phaser.Scene {
         this.effects.floatingText(event.message, layout.boardX + layout.cell * 5, layout.boardY + layout.cell * 3);
         this.toast = { message: event.message, untilMs: this.time.now + 2400 };
         this.highlightUntilMs = this.time.now + 2400;
+      }
+      if (event.type === 'skillFeedback') {
+        const layout = createLayout(this.scale.width, this.scale.height, this.displayWidth());
+        this.effects.floatingText(event.message, layout.boardX + layout.cell * 5, layout.boardY + layout.cell * (event.success ? 18 : 3), event.success ? '#ffde59' : '#ff4f78');
+        this.toast = { message: event.message, untilMs: this.time.now + (event.success ? 2200 : 1800) };
+        this.highlightUntilMs = this.time.now + 2200;
       }
       if (event.type === 'dangerRescue' || event.type === 'safetyWindow') {
         const layout = createLayout(this.scale.width, this.scale.height, this.displayWidth());
