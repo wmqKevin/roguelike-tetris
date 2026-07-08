@@ -9,9 +9,9 @@
 - Platform: GitHub Pages
 - URL: https://wmqkevin.github.io/roguelike-tetris/
 - Source branch: `main`
-- Source release commit: pending Contents API update
+- Source release commit: `32f56d5df8433c90aeac845d6c2ed8164e1e068b`
 - Deploy branch: `gh-pages`
-- Deploy commit: pending Contents API update
+- Deploy commit: `4dd60ce411426a0edf99d955915db40ce4357546`
 - Build command: `npm run build`
 - Artifact: `dist/`
 - Artifact size: 1.3 MB
