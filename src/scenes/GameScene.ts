@@ -129,7 +129,12 @@ export class GameScene extends Phaser.Scene {
       }
       if (event.type === 'skillFeedback') {
         const layout = createLayout(this.scale.width, this.scale.height, this.displayWidth());
-        this.effects.floatingText(event.message, layout.boardX + layout.cell * 5, layout.boardY + layout.cell * (event.success ? 18 : 3), event.success ? '#ffde59' : '#ff4f78');
+        if (event.success) {
+          this.effects.skillPeak(event.message);
+          this.effects.bottomRowSweep(layout);
+        } else {
+          this.effects.floatingText(event.message, layout.boardX + layout.cell * 8.3, layout.boardY + layout.cell * 18.5, '#ff4f78');
+        }
         this.toast = { message: event.message, untilMs: this.time.now + (event.success ? 2200 : 1800) };
         this.highlightUntilMs = this.time.now + 2200;
       }
@@ -141,8 +146,7 @@ export class GameScene extends Phaser.Scene {
       }
       if (event.type === 'special' || event.type === 'skill') {
         this.audio.playSfx('skill');
-        if (event.type === 'skill') this.effects.skillPeak();
-        else this.effects.specialTrigger();
+        if (event.type === 'special') this.effects.specialTrigger();
       }
       if (event.type === 'gameOver') {
         this.audio.playSfx('game_over');
