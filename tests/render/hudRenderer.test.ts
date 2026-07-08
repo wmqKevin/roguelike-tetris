@@ -237,6 +237,49 @@ describe('toast layout', () => {
   });
 });
 
+describe('skill and trial feedback HUD', () => {
+  it('renders low-energy warning beside the C skill row and keeps the trial reward strip visible', async () => {
+    const { HudRenderer } = await import('../../src/render/hudRenderer');
+    const texts: string[] = [];
+    const rectangles: Array<{ x: number; y: number; width: number; height: number; color: number }> = [];
+    const scene = {
+      scale: { width: 520, height: 390 },
+      time: { now: 1000 },
+      input: { on: () => undefined },
+      add: {
+        rectangle: (x: number, y: number, width: number, height: number, color: number) => {
+          rectangles.push({ x, y, width, height, color });
+          return chainable();
+        },
+        container: () => chainable(),
+        text: (_x: number, _y: number, value: string) => {
+          texts.push(value);
+          return chainable();
+        }
+      }
+    };
+    const renderer = new HudRenderer(scene as never, { drawMiniPiece: () => undefined } as never, () => undefined, () => undefined);
+    const state = new GameState('skill-warning-hud');
+    state.modifiers.skills = ['line_clearer'];
+    state.latestUpgradeGoal = '再消 8 行拿下一奖';
+    const layout = createLayout(520, 390, 520);
+
+    renderer.render(state, layout, 0, {
+      nowMs: 1000,
+      highlightUntilMs: 0,
+      skillWarning: { message: '能量不足 100', skillId: 'line_clearer', untilMs: 1800, shakeUntilMs: 1250 },
+      trialRewardStrip: { message: '试用完成 +20 能量 / +120 分 / 徽章进度 +1', untilMs: 3000 },
+      showTutorial: false,
+      usedTutorialActions: new Set()
+    });
+
+    expect(texts).toContain('能量不足 100');
+    expect(texts).toContain('试用完成 +20 能量 / +120 分 / 徽章进度 +1');
+    expect(rectangles.some((rect) => rect.color === 0x4d1822)).toBe(true);
+    expect(rectangles.some((rect) => rect.color === 0x103d2a)).toBe(true);
+  });
+});
+
 describe('v0.8 reward and build helpers', () => {
   it('keeps 520x390 landscape reward cards below the status strip', async () => {
     const { createRewardCardLayout } = await import('../../src/render/hudRenderer');
