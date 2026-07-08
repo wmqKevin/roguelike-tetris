@@ -8,6 +8,7 @@ import { HudRenderer, type TutorialAction } from '../render/hudRenderer';
 import { createLayout } from '../render/responsiveLayout';
 import { loadSave, recordRun, type SaveData } from '../storage/saveService';
 import type { ActivePiece, InputCommand } from '../types/game';
+import type { UpgradeEffect } from '../data/upgrades';
 
 export class GameScene extends Phaser.Scene {
   private state!: GameState;
@@ -19,6 +20,7 @@ export class GameScene extends Phaser.Scene {
   private saveData!: SaveData;
   private toast?: { message: string; untilMs: number };
   private highlightUntilMs = 0;
+  private firstRewardDemo?: { effect: UpgradeEffect; untilMs: number };
   private tutorialEnabled = true;
   private runRecorded = false;
   private readonly usedTutorialActions = new Set<TutorialAction>();
@@ -29,6 +31,10 @@ export class GameScene extends Phaser.Scene {
 
   create(): void {
     this.saveData = loadSave();
+    this.audio.setBusVolume('master', this.saveData.settings.masterVolume);
+    this.audio.setBusVolume('sfx', this.saveData.settings.sfxVolume);
+    this.audio.setBusVolume('music', this.saveData.settings.musicVolume);
+    this.audio.playMusic();
     this.state = new GameState('mvp-seed');
     this.boardRenderer = new BoardRenderer(this);
     this.hudRenderer = new HudRenderer(this, this.boardRenderer, (index) => this.pick(index), () => this.restart());
@@ -51,6 +57,9 @@ export class GameScene extends Phaser.Scene {
       nowMs: this.time.now,
       toast: this.toast,
       highlightUntilMs: this.highlightUntilMs,
+      firstRewardDemo: this.firstRewardDemo && this.time.now < this.firstRewardDemo.untilMs
+        ? this.firstRewardDemo
+        : undefined,
       showTutorial: this.tutorialEnabled && (this.state.phase === 'playing' || this.state.phase === 'reward'),
       usedTutorialActions: this.usedTutorialActions,
       codex: this.saveData.codex
@@ -65,6 +74,7 @@ export class GameScene extends Phaser.Scene {
       if (command === 'Skill3') this.pick(2);
       return;
     }
+    this.audio.playMusic();
     this.trackTutorialAction(command);
     const impact = command === 'HardDrop' && this.state.phase === 'playing' ? this.hardDropImpactPoint() : undefined;
     this.state.command(command);
@@ -77,18 +87,26 @@ export class GameScene extends Phaser.Scene {
   private pick(index: number): void {
     const upgrade = this.state.rewardOptions[index];
     if (!upgrade) return;
+    const isFirstReward = this.state.ownedUpgrades.length === 0;
+    this.audio.playMusic();
     this.usedTutorialActions.add('reward');
     this.state.selectReward(index);
     this.audio.playSfx('reward');
     this.effects.rewardBurst();
     this.highlightUntilMs = this.time.now + 1500;
+    if (isFirstReward) {
+      const layout = createLayout(this.scale.width, this.scale.height, this.displayWidth());
+      this.effects.firstRewardDemo(upgrade.effect, layout);
+      this.firstRewardDemo = { effect: upgrade.effect, untilMs: this.time.now + 1050 };
+    }
     this.toast = { message: `${upgrade.name}已生效：${upgrade.description.replace(/。$/, '')}`, untilMs: this.time.now + 1800 };
   }
 
   private consumeEvents(): void {
     for (const event of this.state.events.splice(0)) {
       if (event.type === 'lineClear') {
-        this.audio.playSfx(event.lines === 4 ? 'tetris' : 'line_clear');
+        const tier = Math.max(1, Math.min(4, event.lines)) as 1 | 2 | 3 | 4;
+        this.audio.playSfx(`line_clear_${tier}`);
         this.effects.lineClear(event.lines);
       }
       if (event.type === 'stageStart') {
@@ -108,11 +126,12 @@ export class GameScene extends Phaser.Scene {
         this.highlightUntilMs = this.time.now + 2400;
       }
       if (event.type === 'special' || event.type === 'skill') {
-        this.audio.playSfx('special');
+        this.audio.playSfx('skill');
         this.effects.specialTrigger();
       }
       if (event.type === 'gameOver') {
         this.audio.playSfx('game_over');
+        this.effects.gameOver();
         this.recordRunOnce();
       }
     }
@@ -124,6 +143,7 @@ export class GameScene extends Phaser.Scene {
     this.usedTutorialActions.clear();
     this.toast = undefined;
     this.highlightUntilMs = 0;
+    this.firstRewardDemo = undefined;
     this.runRecorded = false;
   }
 
