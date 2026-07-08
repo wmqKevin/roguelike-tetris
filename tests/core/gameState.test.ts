@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Board } from '../../src/core/board';
 import { SevenBag } from '../../src/core/bag';
-import { GameState, findUpgrade } from '../../src/core/gameState';
+import { FIRST_REWARD_SAFETY_MS, GameState, findUpgrade } from '../../src/core/gameState';
 import { createRng } from '../../src/core/rng';
 import { tryRotate } from '../../src/core/srs';
 import { getCells } from '../../src/core/tetrominoes';
@@ -108,12 +108,56 @@ describe('GameState', () => {
     state.selectReward(0);
 
     expect(state.phase).toBe('playing');
+    expect(state.firstRewardSafetyRemainingMs).toBe(FIRST_REWARD_SAFETY_MS);
     expect(state.lowPressurePiecesRemaining).toBe(4);
     expect(state.firstRewardTrialRemaining).toBe(4);
 
     state.command('HardDrop');
+    expect(state.lowPressurePiecesRemaining).toBe(4);
+    state.step(FIRST_REWARD_SAFETY_MS);
+    state.command('HardDrop');
     expect(state.lowPressurePiecesRemaining).toBe(3);
     expect(state.firstRewardTrialRemaining).toBe(3);
+  });
+
+  it('freezes gravity during the first reward safety demo window', () => {
+    const state = new GameState('first-reward-freeze');
+    state.phase = 'reward';
+    state.rewardOptions = [findUpgrade('stable_preview')];
+
+    state.selectReward(0);
+    const y = state.active.y;
+    state.step(FIRST_REWARD_SAFETY_MS - 1);
+    state.command('SoftDrop');
+
+    expect(state.active.y).toBe(y);
+    expect(state.phase).toBe('playing');
+    expect(state.events).toContainEqual({ type: 'safetyWindow', message: '安全演示 1.5 秒：奖励已生效，危险暂停', durationMs: FIRST_REWARD_SAFETY_MS });
+
+    state.step(1);
+    state.command('SoftDrop');
+    expect(state.active.y).toBe(y + 1);
+  });
+
+  it('slows Stage 1-2 gravity before returning to the normal curve', () => {
+    const state = new GameState('newcomer-gravity');
+    const stageOneInterval = state.effectiveGravityIntervalMs();
+    state.stageIndex = 2;
+
+    expect(stageOneInterval).toBeGreaterThan(state.effectiveGravityIntervalMs());
+  });
+
+  it('uses one newcomer danger rescue before the first reward', () => {
+    const state = new GameState('newcomer-rescue');
+    for (let y = 8; y < state.board.height; y += 1) {
+      for (let x = 0; x < state.board.width - 1; x += 1) state.board.set(x, y, { kind: 'normal' });
+    }
+
+    state.command('HardDrop');
+
+    expect(state.newcomerRescueUsed).toBe(true);
+    expect(state.dangerHintText).toContain('新手救场');
+    expect(state.events).toContainEqual({ type: 'dangerRescue', message: '顶部危险：已触发新手救场，自动清理最低一行' });
   });
 
   it('emits first reward feedback and a next-step goal', () => {
@@ -136,6 +180,7 @@ describe('GameState', () => {
     state.selectReward(0);
 
     expect(state.energy).toBe(100);
+    state.step(FIRST_REWARD_SAFETY_MS);
     state.command('Skill1');
     expect(state.events).toContainEqual({ type: 'trialFeedback', message: '试用触发：行清除器已清理底线' });
   });
@@ -203,5 +248,15 @@ describe('GameState', () => {
     state.rightWellBlockedLocks = 0;
     state.noClearHardDrops = 5;
     expect(state.nextRunAdviceText()).toContain('连续无消行硬降');
+  });
+
+  it('returns current build guidance and next-run build advice', () => {
+    const state = new GameState('build-guidance');
+    expect(state.currentBuildGuidanceText()).toContain('当前流派：未定型');
+
+    state.ownedUpgrades = [findUpgrade('precision_hard_drop')];
+
+    expect(state.currentBuildGuidanceText()).toContain('推荐下一奖');
+    expect(state.nextRunBuildAdviceText()).toContain('Next 预览');
   });
 });
