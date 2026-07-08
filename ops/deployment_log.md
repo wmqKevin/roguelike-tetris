@@ -1,5 +1,34 @@
 # Deployment Log
 
+## 2026-07-09 - v0.9.0 Web Release
+
+- Issue: ZI-125
+- Development source: ZI-126
+- QA source: ZI-127
+- Platform: GitHub Pages
+- URL: https://wmqkevin.github.io/roguelike-tetris/
+- Source branch: `main`
+- Source release commit before log entry: `0aed2d35de22fa01ec848475bf2d15fc7fb73cea`
+- Deploy branch: `gh-pages`
+- Deploy commit: `1c872ad2fb05a0ee3f98485bfa528cf40fc06cd2`
+- Build command: `npm run build`
+- Artifact: `dist/`
+- Artifact size: 1.3 MB
+- Main JS: `dist/assets/index-BRfhnbcN.js` (`1,252.82 kB`, gzip `335.99 kB`)
+- Main CSS: `dist/assets/index-DiInh9Gy.css` (`0.39 kB`, gzip `0.28 kB`)
+- Verification:
+  - `npm install`: passed, 0 vulnerabilities
+  - `npm audit --audit-level=high`: passed, 0 vulnerabilities
+  - `npm test`: passed, 5 files / 48 tests
+  - `npm run build`: passed
+  - HTTP smoke: root returned 200, v0.9 main JS returned 200, old v0.8 main JS returned 404
+- Rollback:
+  - Restore `gh-pages` to v0.8.0 deploy commit `3fcca2cc1e00ea4da94e2fe2f1543d94618ae61b`; broader fallback targets remain v0.7.0 `374e687839941537f1ff8d5383fcb812c9fa4aa2` or v0.6.0 `92902c2d6a04323652227eaaffba8bcb6a4bf4d1`.
+- Known residual risks:
+  - P2 manual audio mix and broader physical-device coverage remain deferred.
+  - The main JavaScript chunk exceeds Vite's 500 kB warning threshold after minification.
+
+
 ## 2026-07-08 - v0.5.0 Web Release
 
 - Issue: ZI-93
