@@ -44,6 +44,19 @@ export type RewardCardLayout = {
   hintY: number;
 };
 
+export type FocusedRewardLayout = {
+  focusedIndex: number;
+  cardW: number;
+  cardH: number;
+  x: number;
+  y: number;
+  detailY: number;
+  detailW: number;
+  stripY: number;
+  chipW: number;
+  chipGap: number;
+};
+
 export type GameOverPanelLine = {
   key: string;
   value: string;
@@ -115,6 +128,25 @@ export function createRewardCardLayout(width: number, layout: Layout, index: num
     bodyY: compactLandscape ? 56 : 91,
     demoY: compactLandscape ? cardH - 38 : cardH - 58,
     hintY: cardH - 25
+  };
+}
+
+export function createFocusedRewardLayout(width: number, height: number, layout: Layout): FocusedRewardLayout {
+  const cardW = Math.min(width - 32, Math.max(270, Math.floor(width * 0.82)));
+  const cardH = 150;
+  const top = Math.max(96, Math.min(layout.boardY + 44, Math.floor(height * 0.2)));
+  const focusedIndex = 0;
+  return {
+    focusedIndex,
+    cardW,
+    cardH,
+    x: width / 2,
+    y: top + cardH / 2,
+    detailY: top + cardH + 18,
+    detailW: width - 44,
+    stripY: top - 26,
+    chipW: Math.floor((width - 48) / 3),
+    chipGap: 8
   };
 }
 
@@ -306,6 +338,7 @@ export class HudRenderer {
     if (state.lowPressurePiecesRemaining > 0) this.text(layout.boardX, layout.boardY + layout.cell * 20 + 42, `低压缓冲 ${state.lowPressurePiecesRemaining} 块`, 16, '#ffde59');
     if (state.dangerHintText) this.text(layout.boardX, layout.boardY + layout.cell * 20 + 68, state.dangerHintText, 16, '#ffde59').setWordWrapWidth(layout.cell * 10);
     else if (state.latestUpgradeGoal) this.text(layout.boardX, layout.boardY + layout.cell * 20 + 68, state.latestUpgradeGoal, 16, '#9befff');
+    if (state.phase === 'playing') this.text(layout.boardX, layout.boardY - 74, state.openingGoalText(), 15, '#9befff').setWordWrapWidth(layout.cell * 10);
   }
 
   private compactHud(state: GameState, layout: Layout, highScore: number, ui: HudUiState): void {
@@ -341,15 +374,26 @@ export class HudRenderer {
     else if (state.dangerHintText) this.text(goalX, goalY, state.phase === 'reward' && compactLandscape ? compactRewardStatusText(state.dangerHintText) : state.dangerHintText, state.phase === 'reward' && compactLandscape ? 13 : 15, '#ffde59').setWordWrapWidth(goalW);
     else if (state.lowPressurePiecesRemaining > 0) this.text(goalX, goalY, `低压缓冲 ${state.lowPressurePiecesRemaining} 块`, 15, '#ffde59');
     else if (state.latestUpgradeGoal && state.phase !== 'reward') this.text(goalX, goalY, state.latestUpgradeGoal, 15, '#9befff').setWordWrapWidth(360);
+    if (state.phase === 'playing' && layout.portrait) {
+      const route = state.ownedUpgrades.length > 0 ? `你正在走：${state.runStyleLabel()}｜${state.recommendedNextRewardText()}` : state.openingGoalText();
+      this.text(14, 58, route, 13, '#9befff').setWordWrapWidth(this.scene.scale.width - 28);
+    }
     if (!layout.portrait) {
       const x = layout.boardX + layout.cell * 10 + 14;
-      if (state.phase !== 'reward') this.text(x, 62, state.currentBuildGuidanceText(), 14, '#ffde59').setWordWrapWidth(this.scene.scale.width - x - 10);
+      if (state.phase !== 'reward') {
+        const guidance = state.ownedUpgrades.length > 0 ? state.currentBuildGuidanceText() : state.openingGoalText();
+        this.text(x, 62, guidance, 14, '#ffde59').setWordWrapWidth(this.scene.scale.width - x - 10);
+      }
       this.skillPanel(x, 88, state.skillStatuses(), ui.nowMs, true);
       this.skillTargetPreview(state, layout, ui.nowMs);
     }
   }
 
   private rewardCards(state: GameState, layout: Layout): void {
+    if (layout.compactHud && layout.portrait) {
+      this.focusedRewardCards(state, layout);
+      return;
+    }
     state.rewardOptions.forEach((upgrade, index) => {
       const metrics = createRewardCardLayout(this.scene.scale.width, layout, index);
       const compactLandscape = layout.compactHud && !layout.portrait;
@@ -383,6 +427,42 @@ export class HudRenderer {
       card.on('pointerdown', () => this.onRewardPick(index));
       this.cards.push(card);
     });
+  }
+
+  private focusedRewardCards(state: GameState, layout: Layout): void {
+    const metrics = createFocusedRewardLayout(this.scene.scale.width, this.scene.scale.height, layout);
+    state.rewardOptions.forEach((upgrade, index) => {
+      const focused = index === metrics.focusedIndex;
+      const chipX = 20 + metrics.chipW / 2 + index * (metrics.chipW + metrics.chipGap);
+      const labels = rewardCardLabels(upgrade, index).join(' · ');
+      const chip = this.scene.add.container(chipX, metrics.stripY);
+      const chipBg = this.scene.add.rectangle(0, 0, metrics.chipW, 42, focused ? 0x163c4d : 0x111a32, focused ? 0.96 : 0.84)
+        .setStrokeStyle(focused ? 2 : 1, focused ? 0xffde59 : 0x00e5ff, focused ? 0.96 : 0.55);
+      const chipTitle = this.scene.add.text(-metrics.chipW / 2 + 7, -15, `${index + 1}. ${upgrade.name}`, { fontSize: '12px', color: '#ffffff', fontStyle: '700', wordWrap: { width: metrics.chipW - 14 } });
+      const chipTags = this.scene.add.text(-metrics.chipW / 2 + 7, 7, labels || upgrade.rarity.toUpperCase(), { fontSize: '10px', color: focused ? '#ffde59' : '#9befff', wordWrap: { width: metrics.chipW - 14 } });
+      chip.add([chipBg, chipTitle, chipTags]);
+      chip.setSize(metrics.chipW, 42).setInteractive({ useHandCursor: true });
+      chip.on('pointerdown', () => this.onRewardPick(index));
+      this.cards.push(chip);
+    });
+
+    const upgrade = state.rewardOptions[metrics.focusedIndex];
+    if (!upgrade) return;
+    const labels = rewardCardLabels(upgrade, metrics.focusedIndex).join(' · ');
+    const card = this.scene.add.container(metrics.x, metrics.y);
+    const rare = upgrade.rarity === 'epic' || upgrade.rarity === 'legendary';
+    const bg = this.scene.add.rectangle(0, 0, metrics.cardW, metrics.cardH, rare ? 0x1c1734 : 0x111a32, 0.98).setStrokeStyle(3, rare ? 0xffde59 : 0x00e5ff, 0.95);
+    const title = this.scene.add.text(-metrics.cardW / 2 + 16, -metrics.cardH / 2 + 16, `1. ${upgrade.name}`, { fontSize: '20px', color: '#ffffff', fontStyle: '700', wordWrap: { width: metrics.cardW - 32 } });
+    const tags = this.scene.add.text(-metrics.cardW / 2 + 16, -metrics.cardH / 2 + 48, `${upgrade.rarity.toUpperCase()} ${labels}`, { fontSize: '12px', color: '#ffde59', wordWrap: { width: metrics.cardW - 32 } });
+    const effect = this.scene.add.text(-metrics.cardW / 2 + 16, -metrics.cardH / 2 + 76, this.rewardDemoCopy(upgrade.effect), { fontSize: '14px', color: '#9befff', wordWrap: { width: metrics.cardW - 32 } });
+    const hint = this.scene.add.text(metrics.cardW / 2 - 112, metrics.cardH / 2 - 28, '1 选择 / 点卡片', { fontSize: '12px', color: '#9befff' });
+    card.add([bg, title, tags, effect, hint]);
+    card.setSize(metrics.cardW, metrics.cardH).setInteractive({ useHandCursor: true });
+    card.on('pointerdown', () => this.onRewardPick(metrics.focusedIndex));
+    this.cards.push(card);
+
+    this.text(22, metrics.detailY, upgrade.description, 15, '#d7f7ff').setWordWrapWidth(metrics.detailW);
+    this.text(22, metrics.detailY + 48, '默认聚焦推荐卡；2/3 可直接选非聚焦卡', 13, '#75a7ba').setWordWrapWidth(metrics.detailW);
   }
 
   private stageObjective(state: GameState, layout: Layout, nowMs: number): void {
