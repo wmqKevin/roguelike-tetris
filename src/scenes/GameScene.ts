@@ -96,8 +96,9 @@ export class GameScene extends Phaser.Scene {
     this.highlightUntilMs = this.time.now + 1500;
     if (isFirstReward) {
       const layout = createLayout(this.scale.width, this.scale.height, this.displayWidth());
+      this.effects.firstRewardPeak();
       this.effects.firstRewardDemo(upgrade.effect, layout);
-      this.firstRewardDemo = { effect: upgrade.effect, untilMs: this.time.now + 1050 };
+      this.firstRewardDemo = { effect: upgrade.effect, untilMs: this.time.now + 1500 };
     }
     this.toast = { message: `${upgrade.name}已生效：${upgrade.description.replace(/。$/, '')}`, untilMs: this.time.now + 1800 };
   }
@@ -108,6 +109,7 @@ export class GameScene extends Phaser.Scene {
         const tier = Math.max(1, Math.min(4, event.lines)) as 1 | 2 | 3 | 4;
         this.audio.playSfx(`line_clear_${tier}`);
         this.effects.lineClear(event.lines);
+        if (event.lines === 4) this.effects.tetrisPeak();
       }
       if (event.type === 'stageStart') {
         this.audio.playSfx('stage_start');
@@ -125,9 +127,16 @@ export class GameScene extends Phaser.Scene {
         this.toast = { message: event.message, untilMs: this.time.now + 2400 };
         this.highlightUntilMs = this.time.now + 2400;
       }
+      if (event.type === 'dangerRescue' || event.type === 'safetyWindow') {
+        const layout = createLayout(this.scale.width, this.scale.height, this.displayWidth());
+        this.effects.floatingText(event.message, layout.boardX + layout.cell * 5, layout.boardY + layout.cell * 2, '#ffde59');
+        this.toast = { message: event.message, untilMs: this.time.now + 2400 };
+        this.highlightUntilMs = this.time.now + 2400;
+      }
       if (event.type === 'special' || event.type === 'skill') {
         this.audio.playSfx('skill');
-        this.effects.specialTrigger();
+        if (event.type === 'skill') this.effects.skillPeak();
+        else this.effects.specialTrigger();
       }
       if (event.type === 'gameOver') {
         this.audio.playSfx('game_over');
