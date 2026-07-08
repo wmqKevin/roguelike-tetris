@@ -21,6 +21,7 @@ export type GameEvent =
   | { type: 'rewardReady'; options: UpgradeConfig[] }
   | { type: 'upgradeFeedback'; message: string; goal: string }
   | { type: 'trialFeedback'; message: string }
+  | { type: 'skillFeedback'; id: string; message: string; success: boolean }
   | { type: 'dangerRescue'; message: string }
   | { type: 'safetyWindow'; message: string; durationMs: number }
   | { type: 'stageStart'; stage: number }
@@ -29,7 +30,22 @@ export type GameEvent =
   | { type: 'skill'; id: string };
 
 export const FIRST_REWARD_SAFETY_MS = 1500;
+export const FIRST_REWARD_TRIAL_MS = 10000;
 export const NEWCOMER_GRAVITY_MULTIPLIER = 1.25;
+
+function defaultNowMs(): number {
+  return globalThis.performance?.now?.() ?? Date.now();
+}
+
+export type SkillStatus = {
+  id?: string;
+  name: string;
+  key: string;
+  cost: number;
+  ready: boolean;
+  reason: string;
+  action: string;
+};
 
 export class GameState {
   board: Board;
@@ -51,8 +67,11 @@ export class GameState {
   events: GameEvent[] = [];
   lowPressurePiecesRemaining = 0;
   firstRewardTrialRemaining = 0;
+  firstRewardTrialRemainingMs = 0;
   firstRewardTrialText = '';
+  firstRewardTrialCompleted = false;
   firstRewardSafetyRemainingMs = 0;
+  private firstRewardSafetyStartedAtMs: number | undefined;
   newcomerRescueUsed = false;
   dangerHintText = '';
   latestUpgradeGoal = '';
@@ -65,7 +84,7 @@ export class GameState {
   private gravityElapsed = 0;
   private lockDelay = new LockDelay(BALANCE.lockDelayMs);
 
-  constructor(seed: number | string = Date.now()) {
+  constructor(seed: number | string = Date.now(), private readonly nowMs: () => number = defaultNowMs) {
     this.rng = createRng(seed);
     this.bag = new SevenBag(this.rng);
     this.board = new Board();
@@ -75,6 +94,28 @@ export class GameState {
 
   preview(): PieceType[] {
     return this.bag.peek(BALANCE.previewCount + this.modifiers.previewBonus);
+  }
+
+  skillStatuses(): SkillStatus[] {
+    const keys = ['C', 'F', 'G'];
+    return [0, 1, 2].map((index) => {
+      const id = this.modifiers.skills[index];
+      const key = keys[index];
+      if (!id) {
+        return { key, name: `技能 ${key}`, cost: 0, ready: false, reason: '当前不能释放', action: '等待奖励解锁技能' };
+      }
+      const cost = this.skillCost(id);
+      const blockedReason = this.skillBlockedReason(cost);
+      return {
+        id,
+        key,
+        name: this.skillName(id),
+        cost,
+        ready: !blockedReason,
+        reason: blockedReason ?? this.skillAction(id),
+        action: this.skillAction(id)
+      };
+    });
   }
 
   currentStage() {
@@ -170,8 +211,11 @@ export class GameState {
 
   step(deltaMs: number): void {
     if (this.phase !== 'playing') return;
+    if (this.firstRewardTrialRemainingMs > 0) this.firstRewardTrialRemainingMs = Math.max(0, this.firstRewardTrialRemainingMs - deltaMs);
+    this.syncFirstRewardSafetyWindow();
     if (this.firstRewardSafetyRemainingMs > 0) {
       this.firstRewardSafetyRemainingMs = Math.max(0, this.firstRewardSafetyRemainingMs - deltaMs);
+      if (this.firstRewardSafetyRemainingMs === 0) this.firstRewardSafetyStartedAtMs = undefined;
       return;
     }
     this.gravityElapsed += deltaMs;
@@ -188,6 +232,12 @@ export class GameState {
       return;
     }
     if (this.phase !== 'playing') return;
+    if (this.isSkillCommand(command)) {
+      if (command === 'Skill1') this.castSkill(this.modifiers.skills[0]);
+      if (command === 'Skill2') this.castSkill(this.modifiers.skills[1]);
+      if (command === 'Skill3') this.castSkill(this.modifiers.skills[2]);
+      return;
+    }
     if (this.firstRewardSafetyRemainingMs > 0) return;
     if (command === 'MoveLeft') this.tryMove(-1, 0);
     if (command === 'MoveRight') this.tryMove(1, 0);
@@ -196,9 +246,6 @@ export class GameState {
     if (command === 'RotateCW') this.rotate(1);
     if (command === 'RotateCCW') this.rotate(-1);
     if (command === 'Hold') this.swapHold();
-    if (command === 'Skill1') this.castSkill(this.modifiers.skills[0]);
-    if (command === 'Skill2') this.castSkill(this.modifiers.skills[1]);
-    if (command === 'Skill3') this.castSkill(this.modifiers.skills[2]);
   }
 
   selectReward(index: number): void {
@@ -223,6 +270,7 @@ export class GameState {
     this.phase = 'playing';
     if (isFirstReward) {
       this.firstRewardSafetyRemainingMs = FIRST_REWARD_SAFETY_MS;
+      this.firstRewardSafetyStartedAtMs = this.nowMs();
       this.events.push({ type: 'safetyWindow', message: '安全演示 1.5 秒：奖励已生效，危险暂停', durationMs: FIRST_REWARD_SAFETY_MS });
     }
     this.spawn(this.demoPieceFor(upgrade));
@@ -270,6 +318,10 @@ export class GameState {
     this.addEnergy(distance * BALANCE.hardDropEnergyPerCell * this.modifiers.hardDropEnergyMultiplier);
     if (this.firstRewardTrialRemaining > 0 && this.ownedUpgrades[this.ownedUpgrades.length - 1]?.effect === 'hard_drop_energy') {
       this.events.push({ type: 'trialFeedback', message: `试用触发：高落差硬降 +${Math.round(distance * BALANCE.hardDropEnergyPerCell * (this.modifiers.hardDropEnergyMultiplier - 1))} 能量` });
+      this.completeFirstRewardTrial('完成高落差硬降');
+    }
+    if (this.firstRewardTrialRemaining > 0 && this.ownedUpgrades[this.ownedUpgrades.length - 1]?.effect === 'preview_plus') {
+      this.completeFirstRewardTrial('按 Next 预判完成推荐落位');
     }
     this.lockActive(true);
   }
@@ -431,7 +483,9 @@ export class GameState {
   private startFirstRewardTrial(upgrade: UpgradeConfig): void {
     this.lowPressurePiecesRemaining = 4;
     this.firstRewardTrialRemaining = 4;
-    this.firstRewardTrialText = this.trialTextFor(upgrade) || '试用期 4 块：无垃圾 / 触发强化目标';
+    this.firstRewardTrialRemainingMs = FIRST_REWARD_TRIAL_MS;
+    this.firstRewardTrialCompleted = false;
+    this.firstRewardTrialText = this.trialTextFor(upgrade) || '10 秒试用：无垃圾 / 触发强化目标';
     if (upgrade.effect === 'line_clear_skill' || upgrade.effect === 'i_call_skill') {
       this.energy = Math.max(this.energy, Number(upgrade.params.cost ?? 100));
     }
@@ -464,14 +518,14 @@ export class GameState {
   private trialTextFor(upgrade: UpgradeConfig): string {
     switch (upgrade.effect) {
       case 'hard_drop_energy':
-        return '试用期 4 块：高落差硬降 / 无垃圾 / 触发强化目标';
+        return '10 秒试用：高落差硬降一次，完成给 +20 能量 / +120 分';
       case 'preview_plus':
-        return '试用期 4 块：新增 Next 高亮 / 无垃圾 / 触发强化目标';
+        return '10 秒试用：看 Next 完成一次推荐落位，完成给 +20 能量 / +120 分';
       case 'line_clear_skill':
       case 'i_call_skill':
-        return '试用期 4 块：技能可释放 / 无垃圾 / 触发强化目标';
+        return '10 秒试用：技能已补能，释放一次完成目标';
       default:
-        return '试用期 4 块：重力降低 / 无垃圾 / 触发强化目标';
+        return '10 秒试用：重力降低 / 无垃圾 / 触发强化目标';
     }
   }
 
@@ -487,21 +541,89 @@ export class GameState {
     return undefined;
   }
 
+  private isSkillCommand(command: InputCommand): boolean {
+    return command === 'Skill1' || command === 'Skill2' || command === 'Skill3';
+  }
+
+  private skillBlockedReason(cost: number): string | undefined {
+    this.syncFirstRewardSafetyWindow();
+    if (this.phase !== 'playing') return '当前不能释放';
+    if (this.firstRewardSafetyRemainingMs > 0) return '安全演示中，稍后释放';
+    if (this.energy < cost) return `能量不足 ${cost}`;
+    return undefined;
+  }
+
+  private syncFirstRewardSafetyWindow(): void {
+    if (this.firstRewardSafetyRemainingMs <= 0) {
+      this.firstRewardSafetyStartedAtMs = undefined;
+      return;
+    }
+    if (this.firstRewardSafetyStartedAtMs === undefined) return;
+    if (this.nowMs() - this.firstRewardSafetyStartedAtMs >= FIRST_REWARD_SAFETY_MS) {
+      this.firstRewardSafetyRemainingMs = 0;
+      this.firstRewardSafetyStartedAtMs = undefined;
+    }
+  }
+
   private castSkill(id?: string): void {
-    if (!id) return;
-    if (id === 'line_clearer' && this.energy >= 100) {
-      this.energy -= 100;
+    if (!id) {
+      this.events.push({ type: 'skillFeedback', id: 'empty', message: '当前不能释放', success: false });
+      return;
+    }
+    const cost = this.skillCost(id);
+    const blockedReason = this.skillBlockedReason(cost);
+    if (blockedReason) {
+      this.events.push({ type: 'skillFeedback', id, message: blockedReason, success: false });
+      return;
+    }
+    if (id === 'line_clearer') {
+      this.energy -= cost;
       const y = this.board.height - 1;
       for (let x = 0; x < this.board.width; x += 1) this.board.set(x, y, { kind: 'empty' });
+      this.events.push({ type: 'skillFeedback', id, message: 'C 释放最低行清除', success: true });
       this.events.push({ type: 'skill', id });
-      if (this.firstRewardTrialRemaining > 0) this.events.push({ type: 'trialFeedback', message: '试用触发：行清除器已清理底线' });
+      if (this.firstRewardTrialRemaining > 0) {
+        this.events.push({ type: 'trialFeedback', message: '试用触发：行清除器已清理底线' });
+        this.completeFirstRewardTrial('完成行清除器释放');
+      }
     }
-    if (id === 'i_call' && this.energy >= 160) {
-      this.energy -= 160;
+    if (id === 'i_call') {
+      this.energy -= cost;
       this.bag.forceNext('I');
+      this.events.push({ type: 'skillFeedback', id, message: '释放成功：下一块已指定为 I', success: true });
       this.events.push({ type: 'skill', id });
-      if (this.firstRewardTrialRemaining > 0) this.events.push({ type: 'trialFeedback', message: '试用触发：下一块已指定为 I' });
+      if (this.firstRewardTrialRemaining > 0) {
+        this.events.push({ type: 'trialFeedback', message: '试用触发：下一块已指定为 I' });
+        this.completeFirstRewardTrial('完成长条呼叫释放');
+      }
     }
+  }
+
+  private completeFirstRewardTrial(reason: string): void {
+    if (this.firstRewardTrialCompleted || this.firstRewardTrialRemainingMs <= 0) return;
+    this.firstRewardTrialCompleted = true;
+    this.firstRewardTrialRemaining = 0;
+    this.firstRewardTrialRemainingMs = 0;
+    this.score += 120;
+    this.addEnergy(20);
+    this.events.push({ type: 'trialFeedback', message: `试用完成：${reason}，+20 能量 / +120 分` });
+  }
+
+  private skillCost(id: string): number {
+    if (id === 'i_call') return 160;
+    return 100;
+  }
+
+  private skillName(id: string): string {
+    if (id === 'i_call') return '长条呼叫';
+    if (id === 'line_clearer') return '行清除器';
+    return '未知技能';
+  }
+
+  private skillAction(id: string): string {
+    if (id === 'i_call') return '释放指定下一块 I';
+    if (id === 'line_clearer') return 'C 释放最低行清除';
+    return '当前不能释放';
   }
 
   private middleStackHeight(): number {
