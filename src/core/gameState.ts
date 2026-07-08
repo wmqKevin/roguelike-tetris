@@ -19,6 +19,7 @@ export type GameEvent =
   | { type: 'lineClear'; lines: number; score: number }
   | { type: 'rewardReady'; options: UpgradeConfig[] }
   | { type: 'upgradeFeedback'; message: string; goal: string }
+  | { type: 'trialFeedback'; message: string }
   | { type: 'stageStart'; stage: number }
   | { type: 'gameOver' }
   | { type: 'special'; kind: CellKind }
@@ -43,6 +44,8 @@ export class GameState {
   modifiers: UpgradeModifiers = baseModifiers();
   events: GameEvent[] = [];
   lowPressurePiecesRemaining = 0;
+  firstRewardTrialRemaining = 0;
+  firstRewardTrialText = '';
   latestUpgradeGoal = '';
 
   private rng: Rng;
@@ -85,6 +88,21 @@ export class GameState {
     if (this.phase === 'victory') return '已突破最终阶段';
     if (remaining <= 0) return `已达成 Stage ${nextStage} 奖励条件`;
     return `差 ${remaining} 行进入 Stage ${nextStage}`;
+  }
+
+  failureReasonText(): string {
+    if (this.phase === 'victory') return '突破全部阶段';
+    const highestRow = this.board.highestVisibleRow();
+    if (highestRow <= 2) return '顶部堆叠过高';
+    if (highestRow <= 6) return '中上层空间不足';
+    return '锁定空间被压缩';
+  }
+
+  bestPerformanceText(): string {
+    const remaining = this.linesUntilReward();
+    if (this.phase === 'victory') return `最高阶段 Stage ${STAGES.length}/8，已通关`;
+    if (remaining <= 0) return `最高阶段 Stage ${this.highestStageReached}/8，已达成下次强化`;
+    return `最高阶段 Stage ${this.highestStageReached}/8，距离强化还差 ${remaining} 行`;
   }
 
   runStyleLabel(): string {
@@ -138,7 +156,7 @@ export class GameState {
     const isFirstReward = this.ownedUpgrades.length === 0;
     this.ownedUpgrades.push(upgrade);
     this.modifiers = applyUpgrade(this.modifiers, upgrade);
-    this.latestUpgradeGoal = this.upgradeGoal(upgrade);
+    this.latestUpgradeGoal = isFirstReward ? this.trialTextFor(upgrade) : this.upgradeGoal(upgrade);
     this.events.push({ type: 'upgradeFeedback', message: this.upgradeFeedback(upgrade), goal: this.latestUpgradeGoal });
     this.rewardOptions = [];
     this.stageIndex += 1;
@@ -149,8 +167,9 @@ export class GameState {
     }
     if (consumedEnergyReward) this.energy = 0;
     this.startStage(this.stageIndex);
-    if (isFirstReward) this.lowPressurePiecesRemaining = 4;
+    if (isFirstReward) this.startFirstRewardTrial(upgrade);
     this.phase = 'playing';
+    this.spawn(this.demoPieceFor(upgrade));
   }
 
   restart(seed: number | string = Date.now()): GameState {
@@ -190,6 +209,9 @@ export class GameState {
     let distance = 0;
     while (this.tryMove(0, 1)) distance += 1;
     this.addEnergy(distance * BALANCE.hardDropEnergyPerCell * this.modifiers.hardDropEnergyMultiplier);
+    if (this.firstRewardTrialRemaining > 0 && this.ownedUpgrades[this.ownedUpgrades.length - 1]?.effect === 'hard_drop_energy') {
+      this.events.push({ type: 'trialFeedback', message: `试用触发：高落差硬降 +${Math.round(distance * BALANCE.hardDropEnergyPerCell * (this.modifiers.hardDropEnergyMultiplier - 1))} 能量` });
+    }
     this.lockActive(true);
   }
 
@@ -219,6 +241,7 @@ export class GameState {
     this.board.lock(this.active);
     this.piecesLocked += 1;
     if (this.lowPressurePiecesRemaining > 0) this.lowPressurePiecesRemaining -= 1;
+    if (this.firstRewardTrialRemaining > 0) this.firstRewardTrialRemaining -= 1;
     const result = this.board.clearLines();
     if (result.cleared > 0) {
       this.combo += 1;
@@ -332,6 +355,37 @@ export class GameState {
     }
   }
 
+  private startFirstRewardTrial(upgrade: UpgradeConfig): void {
+    this.lowPressurePiecesRemaining = 4;
+    this.firstRewardTrialRemaining = 4;
+    this.firstRewardTrialText = this.trialTextFor(upgrade) || '试用期 4 块：无垃圾 / 触发强化目标';
+    if (upgrade.effect === 'line_clear_skill' || upgrade.effect === 'i_call_skill') {
+      this.energy = Math.max(this.energy, Number(upgrade.params.cost ?? 100));
+    }
+    if (upgrade.effect === 'preview_plus') this.bag.forceNext('I');
+    this.latestUpgradeGoal = this.firstRewardTrialText;
+    this.events.push({ type: 'trialFeedback', message: this.firstRewardTrialText });
+  }
+
+  private trialTextFor(upgrade: UpgradeConfig): string {
+    switch (upgrade.effect) {
+      case 'hard_drop_energy':
+        return '试用期 4 块：高落差硬降 / 无垃圾 / 触发强化目标';
+      case 'preview_plus':
+        return '试用期 4 块：新增 Next 高亮 / 无垃圾 / 触发强化目标';
+      case 'line_clear_skill':
+      case 'i_call_skill':
+        return '试用期 4 块：技能可释放 / 无垃圾 / 触发强化目标';
+      default:
+        return '试用期 4 块：重力降低 / 无垃圾 / 触发强化目标';
+    }
+  }
+
+  private demoPieceFor(upgrade: UpgradeConfig): PieceType | undefined {
+    if (upgrade.effect === 'hard_drop_energy' || upgrade.effect === 'preview_plus' || upgrade.effect === 'i_call_skill') return 'I';
+    return undefined;
+  }
+
   private nextSpecialKind(): CellKind | undefined {
     for (const special of this.modifiers.specialIntervals) {
       if ((this.piecesLocked + 1) % special.interval === 0) return special.kind;
@@ -346,11 +400,13 @@ export class GameState {
       const y = this.board.height - 1;
       for (let x = 0; x < this.board.width; x += 1) this.board.set(x, y, { kind: 'empty' });
       this.events.push({ type: 'skill', id });
+      if (this.firstRewardTrialRemaining > 0) this.events.push({ type: 'trialFeedback', message: '试用触发：行清除器已清理底线' });
     }
     if (id === 'i_call' && this.energy >= 160) {
       this.energy -= 160;
       this.bag.forceNext('I');
       this.events.push({ type: 'skill', id });
+      if (this.firstRewardTrialRemaining > 0) this.events.push({ type: 'trialFeedback', message: '试用触发：下一块已指定为 I' });
     }
   }
 }
