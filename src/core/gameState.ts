@@ -9,6 +9,7 @@ import { LockDelay } from './lockDelay';
 import { createRng, type Rng } from './rng';
 import { scoreLineClear } from './scoring';
 import { tryRotate } from './srs';
+import { getCells } from './tetrominoes';
 import { applyUpgrade, baseModifiers, type UpgradeModifiers } from '../rogue/upgradeSystem';
 import { createFirstRewardOptions, createRewardOptions } from '../rogue/rewardPool';
 
@@ -47,6 +48,9 @@ export class GameState {
   firstRewardTrialRemaining = 0;
   firstRewardTrialText = '';
   latestUpgradeGoal = '';
+  noClearHardDrops = 0;
+  centerPressureLocks = 0;
+  rightWellBlockedLocks = 0;
 
   private rng: Rng;
   private bag: SevenBag;
@@ -119,6 +123,15 @@ export class GameState {
   nextRunGoalText(): string {
     if (this.phase === 'victory') return '挑战更高分数';
     return `进入 Stage ${Math.min(this.highestStageReached + 1, STAGES.length)}`;
+  }
+
+  nextRunAdviceText(): string {
+    if (this.phase === 'victory') return '继续保留右侧井口，冲击更高连消分数';
+    if (this.middleStackHeight() >= 13 || this.centerPressureLocks >= 3) return '减少中路堆叠，先把 4-5 列压低';
+    if (this.rightWellBlockedLocks >= 3) return '优先清右侧井口，给 I 块保留直井';
+    if (this.noClearHardDrops >= 5) return '硬降前先横移找消行，避免连续无消行硬降';
+    if (!this.ownedUpgrades.some((upgrade) => upgrade.effect === 'preview_plus')) return '下一局尝试稳定预判，提前规划 Next';
+    return '优先清右侧井口，保留一格直井';
   }
 
   step(deltaMs: number): void {
@@ -238,6 +251,10 @@ export class GameState {
 
   private lockActive(hardDrop = false): void {
     const special = this.active.special;
+    const lockedCells = getCells(this.active.type, this.active.rotation).map(([dx, dy]) => ({
+      x: this.active.x + dx,
+      y: this.active.y + dy - HIDDEN_ROWS
+    }));
     this.board.lock(this.active);
     this.piecesLocked += 1;
     if (this.lowPressurePiecesRemaining > 0) this.lowPressurePiecesRemaining -= 1;
@@ -254,7 +271,11 @@ export class GameState {
       this.events.push({ type: 'lineClear', lines: result.cleared, score });
     } else {
       this.combo = 0;
+      if (hardDrop) this.noClearHardDrops += 1;
     }
+    if (result.cleared > 0) this.noClearHardDrops = 0;
+    if (lockedCells.some((cell) => cell.x >= 4 && cell.x <= 5 && cell.y >= 0 && cell.y <= 9)) this.centerPressureLocks += 1;
+    if (this.isRightWellBlocked()) this.rightWellBlockedLocks += 1;
     if (special && special !== 'normal') this.events.push({ type: 'special', kind: special });
     this.events.push({ type: 'lock', hardDrop });
     this.checkStageComplete();
@@ -408,6 +429,21 @@ export class GameState {
       this.events.push({ type: 'skill', id });
       if (this.firstRewardTrialRemaining > 0) this.events.push({ type: 'trialFeedback', message: '试用触发：下一块已指定为 I' });
     }
+  }
+
+  private middleStackHeight(): number {
+    return Math.max(this.columnHeight(4), this.columnHeight(5));
+  }
+
+  private isRightWellBlocked(): boolean {
+    return this.columnHeight(9) >= 8 || this.columnHeight(8) >= 12;
+  }
+
+  private columnHeight(x: number): number {
+    for (let y = HIDDEN_ROWS; y < this.board.height; y += 1) {
+      if (this.board.get(x, y).kind !== 'empty') return this.board.height - y;
+    }
+    return 0;
   }
 }
 
