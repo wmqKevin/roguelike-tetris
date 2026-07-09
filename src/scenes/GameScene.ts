@@ -162,8 +162,6 @@ export class GameScene extends Phaser.Scene {
           }
         } else {
           this.skillWarning = { message: event.message, skillId: event.id === 'empty' ? undefined : event.id, untilMs: this.time.now + 1600, shakeUntilMs: this.time.now + 250 };
-          this.effects.floatingText(event.message, layout.boardX + layout.cell * 8.3, layout.boardY + layout.cell * 18.5, '#ff4f78');
-          this.toast = { message: event.message, untilMs: this.time.now + 1200 };
         }
         this.highlightUntilMs = this.time.now + 2200;
       }
