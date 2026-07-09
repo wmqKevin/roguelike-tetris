@@ -4,6 +4,55 @@ Release date: 2026-07-09
 Platform: Web
 Deployment URL: https://wmqkevin.github.io/roguelike-tetris/
 
+## v0.13.0 Release
+
+v0.13.0 focuses on first-screen readability and early-run feedback clarity. It
+keeps the core Tetris rules stable while tightening the Boot Scene entry, the
+first-trial reward read, and the compact HUD feedback stack.
+
+### Release Scope
+
+- P0: Boot Scene now presents the opening experience cleanly instead of risking
+  a black first screen.
+- P0: First-run guidance and early route/context copy are more visible during
+  the opening moments.
+- P1: Reward and skill feedback sequencing is clearer, with updated effect
+  timing and HUD rendering for the opening experience pass.
+- P1: Compact HUD feedback is adjusted so the v0.13 opening guidance does not
+  regress the existing v0.12 settlement and reward cleanup.
+
+### Verification
+
+- `npm install`: completed with 0 vulnerabilities.
+- `npm test`: 5 files / 54 tests passed.
+- `npm run build`: passed and produced `assets/index-CfIYsrBR.js`
+  (1,262.98 kB, gzip 338.79 kB), `assets/index-DiInh9Gy.css` (0.39 kB,
+  gzip 0.28 kB), and `index.html` (0.40 kB, gzip 0.27 kB). Vite still reports
+  the expected Phaser bundle-size warning.
+- Stage 2 QA accepted the release candidate with no P0 / release-blocking
+  findings.
+- HTTP smoke after deployment: root page 200, v0.13 main JS 200, superseded
+  v0.12 main JS 404.
+
+### Known Risks
+
+- Subjective audio/BGM mix remains a Stage 4 online retest gate on an audible
+  device.
+- BUG-011 is carried into v0.14: 390px portrait first-run beginner operation
+  hint may not render in the first game. Stage 2 classified it as P1 and not
+  release-blocking.
+- Browser regression coverage here is headless/unit/build plus HTTP smoke, not
+  a full physical-device long-run playtest.
+
+### Rollback Plan
+
+- To roll back to v0.11.0, restore `gh-pages` deploy commit
+  `3a109dd9ab9b85e526cd12eeda934f417d2334b9` and `main`
+  `44d0adc50d8ce694668c08300caa1203552757d4`.
+- To roll back to v0.10.0, restore `gh-pages` deploy commit
+  `63666af3e37272e0188611c6511030d308baa5dd` and `main`
+  `94e5d28fa0726824126e6cd3745abdbb718aa869`.
+
 ## v0.12.0 Release
 
 v0.12.0 finishes the experience-polish pass for the first trial reward, Game
