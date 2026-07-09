@@ -1,5 +1,33 @@
 # Deployment Log
 
+## 2026-07-09 - v0.13.0 Web Release
+
+- Issue: ZI-170
+- Development source: ZI-167 (`cc20120`, `v0.13/experience-iteration`)
+- QA source: ZI-169, conditionally passed with no P0 / release-blocking issues
+- Platform: GitHub Pages
+- URL: https://wmqkevin.github.io/roguelike-tetris/
+- Source branch: `main`
+- Source release commit before log entry: `35c5ced8687d0661b12835b9dc98290430cbae7b`
+- Deploy branch: `gh-pages`
+- Deploy commit: `83f47e6a8cdde6f70d96891c2036f5a014f5abd6`
+- Build command: `npm run build`
+- Artifact: `dist/`
+- Artifact size: 1.3 MB
+- Main JS: `dist/assets/index-CfIYsrBR.js` (`1,262.98 kB`, gzip `338.79 kB`)
+- Main CSS: `dist/assets/index-DiInh9Gy.css` (`0.39 kB`, gzip `0.28 kB`)
+- Verification:
+  - `npm install`: passed, 0 vulnerabilities
+  - `npm test`: passed, 5 files / 54 tests
+  - `npm run build`: passed
+  - HTTP smoke: root returned 200, v0.13 main JS returned 200, old v0.12 main JS returned 404
+- Rollback:
+  - Restore `main` to v0.11.0 source commit `44d0adc50d8ce694668c08300caa1203552757d4` and `gh-pages` to deploy commit `3a109dd9ab9b85e526cd12eeda934f417d2334b9`; broader fallback is v0.10.0 source `94e5d28fa0726824126e6cd3745abdbb718aa869` and deploy `63666af3e37272e0188611c6511030d308baa5dd`.
+- Known residual risks:
+  - Stage 4 must still perform subjective audio/SFX/BGM checks on an audible device.
+  - BUG-011 is carried into v0.14: 390px portrait first-run beginner operation hint may not render in the first game; Stage 2 classified it as non-blocking P1.
+  - The main JavaScript chunk exceeds Vite's 500 kB warning threshold after minification.
+
 ## 2026-07-09 - v0.9.0 Web Release
 
 - Issue: ZI-125
