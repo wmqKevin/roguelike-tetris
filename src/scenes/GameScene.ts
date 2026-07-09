@@ -176,6 +176,7 @@ export class GameScene extends Phaser.Scene {
         if (event.type === 'special') this.effects.specialTrigger();
       }
       if (event.type === 'gameOver') {
+        this.clearTransientFeedback();
         this.audio.playSfx('game_over');
         this.effects.gameOver();
         this.recordRunOnce();
@@ -183,13 +184,17 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  private clearTransientFeedback(): void {
+    this.toast = undefined;
+    this.skillWarning = undefined;
+    this.trialRewardStrip = undefined;
+  }
+
   private restart(): void {
     this.state = new GameState(Date.now());
     this.tutorialEnabled = false;
     this.usedTutorialActions.clear();
-    this.toast = undefined;
-    this.skillWarning = undefined;
-    this.trialRewardStrip = undefined;
+    this.clearTransientFeedback();
     this.energyRefillUntilMs = 0;
     this.feedbackQueueAvailableMs = 0;
     this.highlightUntilMs = 0;
