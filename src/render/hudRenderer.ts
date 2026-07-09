@@ -11,6 +11,7 @@ export type HudUiState = {
   nowMs: number;
   toast?: { message: string; untilMs: number };
   highlightUntilMs: number;
+  objectivePulseUntilMs?: number;
   energyRefillUntilMs?: number;
   skillWarning?: { message: string; skillId?: string; untilMs: number; shakeUntilMs: number };
   trialRewardStrip?: { message: string; untilMs: number };
@@ -357,7 +358,7 @@ export class HudRenderer {
 
   render(state: GameState, layout: Layout, highScore: number, ui: HudUiState): void {
     this.clear();
-    if (!(state.phase === 'reward' && layout.compactHud && !layout.portrait)) this.stageObjective(state, layout, ui.nowMs);
+    if (!(state.phase === 'reward' && layout.compactHud && !layout.portrait)) this.stageObjective(state, layout, ui.nowMs, ui.objectivePulseUntilMs);
     if (layout.compactHud) this.compactHud(state, layout, highScore, ui);
     else this.wideHud(state, layout, highScore, ui);
 
@@ -536,19 +537,27 @@ export class HudRenderer {
     this.text(22, metrics.detailY + 48, '默认聚焦推荐卡；2/3 可直接选非聚焦卡', 13, '#75a7ba').setWordWrapWidth(metrics.detailW);
   }
 
-  private stageObjective(state: GameState, layout: Layout, nowMs: number): void {
+  private stageObjective(state: GameState, layout: Layout, nowMs: number, objectivePulseUntilMs = 0): void {
     const remaining = state.linesUntilReward();
     const energy = state.energyUntilReward();
     const pieces = state.piecesUntilReward();
     const urgentLines = remaining > 0 && remaining <= 2;
     const urgentEnergy = energy > 0 && energy <= 20;
     const pulseOn = Math.floor(nowMs / 180) % 2 === 0;
-    const color = (urgentLines || urgentEnergy || pieces <= 2) && pulseOn ? '#ffde59' : '#d7f7ff';
+    const objectivePulse = nowMs < objectivePulseUntilMs;
+    const color = objectivePulse || ((urgentLines || urgentEnergy || pieces <= 2) && pulseOn) ? '#ffde59' : '#d7f7ff';
     const parts = [`再消 ${remaining} 行`, `攒满能量 ${Math.ceil(energy)}`];
     if (Number.isFinite(pieces)) parts.push(`落 ${pieces} 块`);
     if (layout.compactHud) {
       const x = layout.portrait ? 14 : layout.boardX + layout.cell * 10 + 14;
       const y = layout.portrait ? 58 : 112;
+      if (objectivePulse) {
+        const pulseAlpha = 0.28 + Math.sin(nowMs / 65) * 0.12;
+        const bgWidth = layout.portrait ? Math.min(this.scene.scale.width - 28, 360) : Math.min(260, this.scene.scale.width - x - 10);
+        const bg = this.scene.add.rectangle(x + bgWidth / 2, y + 13, bgWidth, layout.portrait ? 42 : 48, 0xffde59, pulseAlpha)
+          .setStrokeStyle(2, 0xffde59, 0.8);
+        this.cards.push(this.scene.add.container(0, 0, [bg]));
+      }
       const copy = layout.portrait ? createPortraitGoalCopy(state, nowMs) : undefined;
       this.text(x, y, copy?.primary ?? (remaining > 0 ? `目标：再消 ${remaining} 行` : '目标：选择强化继续推进'), layout.portrait ? 13 : 15, color)
         .setWordWrapWidth(layout.portrait ? Math.max(220, this.scene.scale.width - 28) : this.scene.scale.width - x - 10);
@@ -561,22 +570,19 @@ export class HudRenderer {
       }
     } else {
       const goal = remaining > 0 || energy > 0 || pieces > 0 ? `目标：${parts.join(' / ')} 即可选择强化` : '目标：选择强化继续推进';
+      if (objectivePulse) {
+        const bg = this.scene.add.rectangle(layout.boardX + layout.cell * 5, layout.boardY - 32, layout.cell * 10 + 24, 34, 0xffde59, 0.22 + Math.sin(nowMs / 65) * 0.1)
+          .setStrokeStyle(2, 0xffde59, 0.78);
+        this.cards.push(this.scene.add.container(0, 0, [bg]));
+      }
       this.text(layout.boardX, layout.boardY - 44, goal, 20, color);
     }
   }
 
   private tutorialHints(layout: Layout, used: ReadonlySet<TutorialAction>): void {
-    const hints = [
-      ['move', '<- -> / A-D 移动'],
-      ['rotate', '↑ / X 旋转'],
-      ['hardDrop', 'Space 硬降'],
-      ['hold', 'Shift / V Hold'],
-      ['reward', '1/2/3 奖励选择']
-    ] as const;
-    const visible = hints.filter(([id]) => !used.has(id));
-    if (visible.length === 0) return;
+    if (used.size > 0) return;
     const y = layout.boardY + layout.cell * 20 + 22;
-    this.text(layout.boardX - 8, y, visible.map(([, label]) => label).join('   '), 15, '#9befff').setAlpha(0.82);
+    this.text(layout.boardX - 8, y, '← → 移动 / ↑ 旋转 / Space 硬降 / C Hold', 15, '#9befff').setAlpha(0.82);
   }
 
   private centerPanel(title: string, lines: string[]): void {
