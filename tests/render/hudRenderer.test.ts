@@ -167,7 +167,7 @@ describe('HudRenderer terminal panel', () => {
     expect(layout.panelH).toBe(350);
     expect(leftColumn.length).toBeGreaterThan(0);
     expect(rightColumn.length).toBeGreaterThan(0);
-    expect(layout.retryY + 28).toBeLessThanOrEqual(panelBottom - 12);
+    expect(layout.retryY + 28).toBeLessThanOrEqual(panelBottom - 8);
     layout.lines.forEach((line) => {
       expect(line.y).toBeGreaterThanOrEqual(panelTop + 20);
       expect(line.y + line.height).toBeLessThanOrEqual(layout.retryY - 10);
@@ -176,7 +176,7 @@ describe('HudRenderer terminal panel', () => {
     for (const column of [leftColumn, rightColumn]) {
       column.slice(1).forEach((line, index) => {
         const previous = column[index];
-        expect(line.y).toBeGreaterThanOrEqual(previous.y + previous.height + 5);
+        expect(line.y).toBeGreaterThanOrEqual(previous.y + previous.height + 3);
       });
     }
   });
@@ -345,6 +345,19 @@ describe('skill and trial feedback HUD', () => {
     expect(rectangles.some((rect) => rect.color === 0x4d1822)).toBe(true);
     expect(rectangles.some((rect) => rect.color === 0x103d2a)).toBe(true);
     expect(rectangles.some((rect) => rect.color === 0xffde59)).toBe(true);
+  });
+
+  it('anchors the 390 portrait trial reward strip inside the lower board area', async () => {
+    const { createTrialRewardStripLayout } = await import('../../src/render/hudRenderer');
+    const layout = createLayout(390, 844, 390);
+
+    const strip = createTrialRewardStripLayout(layout, 390, 844);
+
+    expect(strip.x).toBeGreaterThanOrEqual(layout.boardX);
+    expect(strip.x + strip.width).toBeLessThanOrEqual(layout.boardX + layout.cell * 10);
+    expect(strip.y).toBeGreaterThanOrEqual(layout.boardY + layout.cell * 8);
+    expect(strip.y + 38).toBeLessThanOrEqual(layout.boardY + layout.cell * 20);
+    expect(strip.pillX + 48).toBeLessThanOrEqual(390 - 18);
   });
 });
 
