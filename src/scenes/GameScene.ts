@@ -4,8 +4,8 @@ import { AudioManager } from '../audio/audioManager';
 import { InputManager } from '../input/inputManager';
 import { BoardRenderer } from '../render/boardRenderer';
 import { Effects } from '../render/effects';
-import { HudRenderer, type TutorialAction } from '../render/hudRenderer';
-import { createLayout } from '../render/responsiveLayout';
+import { createFocusedRewardLayout, createRewardCardLayout, HudRenderer, type TutorialAction } from '../render/hudRenderer';
+import { createLayout, type Layout } from '../render/responsiveLayout';
 import { loadSave, recordRun, type SaveData } from '../storage/saveService';
 import type { ActivePiece, InputCommand } from '../types/game';
 import type { UpgradeEffect } from '../data/upgrades';
@@ -24,10 +24,19 @@ export class GameScene extends Phaser.Scene {
   private energyRefillUntilMs = 0;
   private feedbackQueueAvailableMs = 0;
   private highlightUntilMs = 0;
+  private objectivePulseUntilMs = 0;
   private firstRewardDemo?: { effect: UpgradeEffect; untilMs: number };
   private tutorialEnabled = true;
   private runRecorded = false;
   private readonly usedTutorialActions = new Set<TutorialAction>();
+  private openingStartedAtMs = 0;
+  private lastObjectiveSignature = '';
+  private openingFeedback = {
+    hardDrop: false,
+    landing: false,
+    energy: false,
+    objective: false
+  };
 
   constructor() {
     super('GameScene');
@@ -40,6 +49,9 @@ export class GameScene extends Phaser.Scene {
     this.audio.setBusVolume('music', this.saveData.settings.musicVolume);
     this.audio.playMusic();
     this.state = new GameState('mvp-seed');
+    this.tutorialEnabled = this.isFirstRunSave();
+    this.openingStartedAtMs = this.time.now;
+    this.lastObjectiveSignature = this.objectiveSignature();
     this.boardRenderer = new BoardRenderer(this);
     this.hudRenderer = new HudRenderer(this, this.boardRenderer, (index) => this.pick(index), () => this.restart());
     this.effects = new Effects(this, this.saveData.settings.reducedMotion);
@@ -61,13 +73,14 @@ export class GameScene extends Phaser.Scene {
       nowMs: this.time.now,
       toast: this.toast,
       highlightUntilMs: this.highlightUntilMs,
+      objectivePulseUntilMs: this.objectivePulseUntilMs,
       energyRefillUntilMs: this.energyRefillUntilMs,
       skillWarning: this.skillWarning,
       trialRewardStrip: this.trialRewardStrip,
       firstRewardDemo: this.firstRewardDemo && this.time.now < this.firstRewardDemo.untilMs
         ? this.firstRewardDemo
         : undefined,
-      showTutorial: this.tutorialEnabled && (this.state.phase === 'playing' || this.state.phase === 'reward'),
+      showTutorial: this.tutorialEnabled && this.isOpeningTutorialActive() && this.state.phase === 'playing',
       usedTutorialActions: this.usedTutorialActions,
       codex: this.saveData.codex
     });
@@ -82,19 +95,29 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     this.audio.playMusic();
+    const previousEnergy = this.state.energy;
+    const previousObjective = this.lastObjectiveSignature;
     this.trackTutorialAction(command);
     const impact = command === 'HardDrop' && this.state.phase === 'playing' ? this.hardDropImpactPoint() : undefined;
     this.state.command(command);
     if (command === 'HardDrop') {
       this.audio.playSfx('hard_drop');
       if (impact) this.effects.hardDropImpact(impact.x, impact.y, impact.radius);
+      if (impact && this.isOpeningFeedbackActive() && !this.openingFeedback.hardDrop) {
+        this.openingFeedback.hardDrop = true;
+        this.effects.floatingText('硬降！+能量', impact.x, impact.y - 18, '#ffde59');
+      }
     }
+    this.handleOpeningProgressFeedback(previousEnergy, previousObjective);
   }
 
   private pick(index: number): void {
     const upgrade = this.state.rewardOptions[index];
     if (!upgrade) return;
     const isFirstReward = this.state.ownedUpgrades.length === 0;
+    const layout = createLayout(this.scale.width, this.scale.height, this.displayWidth());
+    const confirm = this.rewardConfirmBounds(layout, index);
+    this.effects.rewardEquipConfirm(confirm.x, confirm.y, confirm.width, confirm.height, '已装备 / 立即生效');
     this.audio.playMusic();
     this.usedTutorialActions.add('reward');
     this.state.selectReward(index);
@@ -102,7 +125,6 @@ export class GameScene extends Phaser.Scene {
     this.effects.rewardBurst();
     this.highlightUntilMs = this.time.now + 1500;
     if (isFirstReward) {
-      const layout = createLayout(this.scale.width, this.scale.height, this.displayWidth());
       this.effects.firstRewardPeak();
       this.effects.firstRewardDemo(upgrade.effect, layout);
       this.firstRewardDemo = { effect: upgrade.effect, untilMs: this.time.now + 1500 };
@@ -112,6 +134,14 @@ export class GameScene extends Phaser.Scene {
 
   private consumeEvents(): void {
     for (const event of this.state.events.splice(0)) {
+      if (event.type === 'lock') {
+        if (this.isOpeningFeedbackActive() && !this.openingFeedback.landing) {
+          const layout = createLayout(this.scale.width, this.scale.height, this.displayWidth());
+          this.openingFeedback.landing = true;
+          this.effects.firstLandingFlash(layout);
+          this.effects.floatingText('落地稳定', layout.boardX + layout.cell * 5, layout.boardY + layout.cell * 18.8, '#9befff', 620);
+        }
+      }
       if (event.type === 'lineClear') {
         const tier = Math.max(1, Math.min(4, event.lines)) as 1 | 2 | 3 | 4;
         this.audio.playSfx(`line_clear_${tier}`);
@@ -194,10 +224,14 @@ export class GameScene extends Phaser.Scene {
     this.state = new GameState(Date.now());
     this.tutorialEnabled = false;
     this.usedTutorialActions.clear();
+    this.openingStartedAtMs = this.time.now;
+    this.lastObjectiveSignature = this.objectiveSignature();
+    this.openingFeedback = { hardDrop: false, landing: false, energy: false, objective: false };
     this.clearTransientFeedback();
     this.energyRefillUntilMs = 0;
     this.feedbackQueueAvailableMs = 0;
     this.highlightUntilMs = 0;
+    this.objectivePulseUntilMs = 0;
     this.firstRewardDemo = undefined;
     this.runRecorded = false;
   }
@@ -234,6 +268,61 @@ export class GameScene extends Phaser.Scene {
     if (command === 'RotateCW' || command === 'RotateCCW') this.usedTutorialActions.add('rotate');
     if (command === 'HardDrop') this.usedTutorialActions.add('hardDrop');
     if (command === 'Hold') this.usedTutorialActions.add('hold');
+  }
+
+  private handleOpeningProgressFeedback(previousEnergy: number, previousObjective: string): void {
+    const layout = createLayout(this.scale.width, this.scale.height, this.displayWidth());
+    if (this.isOpeningFeedbackActive() && !this.openingFeedback.energy && this.state.energy > previousEnergy) {
+      this.openingFeedback.energy = true;
+      this.energyRefillUntilMs = this.time.now + 900;
+      this.audio.playSfx('reward');
+      this.effects.floatingText('+能量', layout.boardX + layout.cell * 8.4, layout.boardY + layout.cell * 18.4, '#ffde59', 700);
+    }
+    const nextObjective = this.objectiveSignature();
+    if (this.isOpeningFeedbackActive() && !this.openingFeedback.objective && nextObjective !== previousObjective) {
+      this.openingFeedback.objective = true;
+      this.highlightUntilMs = this.time.now + 1200;
+      this.objectivePulseUntilMs = this.time.now + 1200;
+      this.effects.floatingText('目标进度更新', layout.boardX + layout.cell * 5, Math.max(36, layout.boardY - 28), '#9befff', 700);
+    }
+    this.lastObjectiveSignature = nextObjective;
+  }
+
+  private objectiveSignature(): string {
+    return [
+      this.state.linesUntilReward(),
+      Math.ceil(this.state.energyUntilReward()),
+      this.state.piecesUntilReward()
+    ].join(':');
+  }
+
+  private isOpeningFeedbackActive(): boolean {
+    return this.time.now - this.openingStartedAtMs <= 30000;
+  }
+
+  private isOpeningTutorialActive(): boolean {
+    return this.time.now - this.openingStartedAtMs <= 10000 && this.usedTutorialActions.size === 0;
+  }
+
+  private isFirstRunSave(): boolean {
+    return this.saveData.highScore === 0 && this.saveData.bestStage === 0 && this.saveData.codex.upgrades.length === 0;
+  }
+
+  private rewardConfirmBounds(layout: Layout, index: number): { x: number; y: number; width: number; height: number } {
+    if (layout.compactHud && layout.portrait) {
+      const metrics = createFocusedRewardLayout(this.scale.width, this.scale.height, layout);
+      if (index === metrics.focusedIndex) {
+        return { x: metrics.x, y: metrics.y, width: metrics.cardW, height: metrics.cardH };
+      }
+      return {
+        x: 20 + metrics.chipW / 2 + index * (metrics.chipW + metrics.chipGap),
+        y: metrics.stripY,
+        width: metrics.chipW,
+        height: 42
+      };
+    }
+    const metrics = createRewardCardLayout(this.scale.width, layout, index);
+    return { x: metrics.x, y: metrics.y, width: metrics.cardW, height: metrics.cardH };
   }
 
   private displayWidth(): number {
