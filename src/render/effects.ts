@@ -92,6 +92,58 @@ export class Effects {
     this.particleRing(x, y, 0x9befff, this.reducedMotion ? 8 : 18, radius * 0.8);
   }
 
+  firstLandingFlash(layout: Layout): void {
+    const y = layout.boardY + layout.cell * 19.5;
+    const width = layout.cell * 10;
+    const glow = this.scene.add.rectangle(layout.boardX + width / 2, y, width, Math.max(12, layout.cell * 0.8), 0x9befff, 0.34)
+      .setStrokeStyle(2, 0xffde59, 0.72);
+    if (!this.reducedMotion) this.scene.cameras.main.shake(70, 0.0025);
+    this.scene.tweens.add({
+      targets: glow,
+      alpha: 0,
+      scaleX: 1.08,
+      duration: this.reducedMotion ? 110 : 240,
+      ease: 'Cubic.easeOut',
+      onComplete: () => glow.destroy()
+    });
+  }
+
+  rewardEquipConfirm(x: number, y: number, width: number, height: number, message: string): void {
+    const card = this.scene.add.container(x, y);
+    const bg = this.scene.add.rectangle(0, 0, width, height, 0x1b2a46, 0.62)
+      .setStrokeStyle(3, 0xffde59, 1);
+    const sweep = this.scene.add.rectangle(-width / 2, 0, Math.max(10, width * 0.12), height + 12, 0xffffff, 0.36)
+      .setAngle(-10);
+    const label = this.scene.add.text(0, Math.min(height / 2 - 34, 48), message, {
+      fontFamily: 'Inter, Arial, sans-serif',
+      fontSize: width < 150 ? '15px' : '18px',
+      color: '#ffde59',
+      fontStyle: '700'
+    }).setOrigin(0.5);
+    card.add([bg, sweep, label]);
+    card.setScale(1);
+    this.scene.tweens.add({
+      targets: card,
+      scale: 1.08,
+      duration: this.reducedMotion ? 80 : 200,
+      yoyo: true,
+      ease: 'Cubic.easeOut'
+    });
+    this.scene.tweens.add({
+      targets: sweep,
+      x: width / 2,
+      duration: this.reducedMotion ? 120 : 260,
+      ease: 'Cubic.easeInOut'
+    });
+    this.scene.tweens.add({
+      targets: card,
+      alpha: 0,
+      delay: this.reducedMotion ? 180 : 420,
+      duration: 180,
+      onComplete: () => card.destroy()
+    });
+  }
+
   firstRewardDemo(effect: UpgradeEffect, layout: Layout): void {
     if (effect === 'hard_drop_energy') {
       const startX = layout.boardX + layout.cell * 5;
