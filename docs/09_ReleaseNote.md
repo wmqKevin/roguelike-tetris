@@ -4,6 +4,57 @@ Release date: 2026-07-09
 Platform: Web
 Deployment URL: https://wmqkevin.github.io/roguelike-tetris/
 
+## v0.11.0 Release
+
+v0.11.0 tightens the v0.10 feedback layer around failed C-skill input, portrait
+scan pressure, and first-trial payout confirmation without changing the core
+Tetris loop.
+
+### Release Scope
+
+- P1: Low-energy / unavailable C-skill failures now stay beside the C skill row:
+  the row flashes red/yellow, shakes for 250ms, and the old board-bottom
+  failure fly-text/global toast path is removed.
+- P1: 390px portrait top copy is compressed to two lines: one main objective
+  and one short secondary line for route, Stage badge, and the rotating tactical
+  target.
+- P1: First-trial completion still keeps the 2-second reward strip, now with
+  separate jumping `+20 能量` and `+120 分` payout pills for clearer到账感.
+- P2: Audio mix review remains deferred after a best-effort runtime check:
+  headless Chrome can render, while non-headless Chrome exits with missing
+  X server / `$DISPLAY`. QA should cover skill release, reward choice, and Game
+  Over SFX/BGM balance on an audible device.
+
+### Verification
+
+- `npm install --cache /tmp/npm-cache`: completed with 0 vulnerabilities.
+- `npm test`: 5 files / 53 tests passed.
+- `npm run build`: passed and produced `assets/index-BcjZSXD1.js`
+  (1,256.45 kB, gzip 337.00 kB), `assets/index-DiInh9Gy.css` (0.39 kB,
+  gzip 0.28 kB), and `index.html` (0.40 kB, gzip 0.27 kB). Vite still reports
+  the expected Phaser bundle-size warning.
+- `npm audit --audit-level=high`: completed with 0 vulnerabilities.
+- Headless Google Chrome screenshots rendered nonblank at 390x844 portrait,
+  520x390 landscape, and 960x720 desktop.
+
+### Known Risks
+
+- Reliable subjective audio mix/BGM feel remains unverified because this runtime
+  has no non-headless display/audio path. Stage 4 online retest should do the
+  audible-device check that v0.9/v0.10 deferred.
+- Browser regression coverage here is headless smoke plus source/unit coverage,
+  not a full physical-device playtest.
+
+### Rollback Plan
+
+- To roll back to v0.10.0, restore `gh-pages` deploy commit
+  `63666af3e37272e0188611c6511030d308baa5dd` and `main`
+  `94e5d28fa0726824126e6cd3745abdbb718aa869`.
+- To roll back to v0.9.0, restore `gh-pages` deploy commit
+  `1c872ad2fb05a0ee3f98485bfa528cf40fc06cd2`.
+- To roll back to v0.8.0, restore `gh-pages` deploy commit
+  `3fcca2cc1e00ea4da94e2fe2f1543d94618ae61b`.
+
 ## v0.10.0 Release
 
 v0.10.0 sharpens the C-skill release peak and first-reward trial completion
