@@ -238,6 +238,71 @@ describe('toast layout', () => {
 });
 
 describe('skill and trial feedback HUD', () => {
+  it('keeps portrait top goals to two compact lines', async () => {
+    const { createPortraitGoalCopy } = await import('../../src/render/hudRenderer');
+    const state = new GameState('portrait-goal-copy');
+
+    const copy = createPortraitGoalCopy(state, 1000);
+
+    expect(copy.primary).toMatch(/^目标：/);
+    expect(copy.secondary).toContain('清场流');
+    expect(copy.secondary).toContain('Stage 2 徽章');
+    expect(copy.primary).not.toContain('本局推荐流派');
+    expect(copy.secondary).not.toContain('本局推荐流派');
+    expect(copy.secondary.length).toBeLessThanOrEqual(28);
+  });
+
+  it('places the compact skill warning toast to the right of the C row when there is room', async () => {
+    const { createSkillWarningToastLayout } = await import('../../src/render/hudRenderer');
+
+    const toast = createSkillWarningToastLayout(14, 80, 190, 390, true);
+
+    expect(toast.x - toast.width / 2).toBeGreaterThanOrEqual(210);
+    expect(toast.x + toast.width / 2).toBeLessThanOrEqual(390 - 10);
+    expect(toast.y).toBe(90);
+    expect(toast.height).toBe(24);
+  });
+
+  it('renders portrait low-energy warning beside the C skill row without restoring long route copy', async () => {
+    const { HudRenderer } = await import('../../src/render/hudRenderer');
+    const texts: string[] = [];
+    const rectangles: Array<{ x: number; y: number; width: number; height: number; color: number }> = [];
+    const scene = {
+      scale: { width: 390, height: 844 },
+      time: { now: 1000 },
+      input: { on: () => undefined },
+      add: {
+        rectangle: (x: number, y: number, width: number, height: number, color: number) => {
+          rectangles.push({ x, y, width, height, color });
+          return chainable();
+        },
+        container: () => chainable(),
+        text: (_x: number, _y: number, value: string) => {
+          texts.push(value);
+          return chainable();
+        }
+      }
+    };
+    const renderer = new HudRenderer(scene as never, { drawMiniPiece: () => undefined } as never, () => undefined, () => undefined);
+    const state = new GameState('portrait-skill-warning');
+    state.modifiers.skills = ['line_clearer'];
+    const layout = createLayout(390, 844, 390);
+
+    renderer.render(state, layout, 0, {
+      nowMs: 1000,
+      highlightUntilMs: 0,
+      skillWarning: { message: '能量不足 100', skillId: 'line_clearer', untilMs: 1800, shakeUntilMs: 1250 },
+      showTutorial: false,
+      usedTutorialActions: new Set()
+    });
+
+    expect(texts).toContain('目标：再消 2 行');
+    expect(texts).toContain('能量不足 100');
+    expect(texts.some((text) => text.includes('本局推荐流派'))).toBe(false);
+    expect(rectangles.some((rect) => rect.color === 0x4d1822 && rect.y < layout.boardY)).toBe(true);
+    expect(rectangles.some((rect) => rect.color === 0x3a1020 && rect.x > 220 && rect.y < layout.boardY)).toBe(true);
+  });
+
   it('renders low-energy warning beside the C skill row and keeps the trial reward strip visible', async () => {
     const { HudRenderer } = await import('../../src/render/hudRenderer');
     const texts: string[] = [];
@@ -275,8 +340,11 @@ describe('skill and trial feedback HUD', () => {
 
     expect(texts).toContain('能量不足 100');
     expect(texts).toContain('试用完成 +20 能量 / +120 分 / 徽章进度 +1');
+    expect(texts).toContain('+20 能量');
+    expect(texts).toContain('+120 分');
     expect(rectangles.some((rect) => rect.color === 0x4d1822)).toBe(true);
     expect(rectangles.some((rect) => rect.color === 0x103d2a)).toBe(true);
+    expect(rectangles.some((rect) => rect.color === 0xffde59)).toBe(true);
   });
 });
 
