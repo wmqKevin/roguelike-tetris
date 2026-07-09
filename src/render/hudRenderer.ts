@@ -33,6 +33,19 @@ export type ToastLayout = {
   textWidth: number;
 };
 
+export type SkillWarningToastLayout = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  textWidth: number;
+};
+
+export type PortraitGoalCopy = {
+  primary: string;
+  secondary: string;
+};
+
 export type RewardCardLayout = {
   cardW: number;
   cardH: number;
@@ -110,6 +123,29 @@ export function createToastLayout(width: number, height: number, compact: boolea
     textY: y,
     textWidth: toastW - 28
   };
+}
+
+export function createSkillWarningToastLayout(x: number, rowY: number, rowWidth: number, viewportWidth: number, compact: boolean): SkillWarningToastLayout {
+  const height = compact ? 24 : 28;
+  const rightSpace = viewportWidth - (x + rowWidth) - 10;
+  const width = compact ? Math.min(178, Math.max(112, rightSpace >= 112 ? rightSpace - 6 : viewportWidth - x - 14)) : 188;
+  if (compact && rightSpace >= 112) {
+    return { x: x + rowWidth + 6 + width / 2, y: rowY + 10, width, height, textWidth: width - 14 };
+  }
+  return { x: compact ? x + width / 2 : x + rowWidth / 2, y: rowY + (compact ? -16 : 36), width, height, textWidth: width - 14 };
+}
+
+export function createPortraitGoalCopy(state: GameState, nowMs: number): PortraitGoalCopy {
+  const remaining = state.linesUntilReward();
+  const energy = state.energyUntilReward();
+  const pieces = state.piecesUntilReward();
+  const primary = remaining > 0 ? `目标：再消 ${remaining} 行` : '目标：选择强化继续推进';
+  const alternates = [`攒能量 ${Math.ceil(energy)}`];
+  if (Number.isFinite(pieces)) alternates.push(`落 ${pieces} 块`);
+  const tactical = alternates[Math.floor(nowMs / 1100) % alternates.length];
+  const badgeTarget = Math.min(state.highestStageReached + 1, 8);
+  const route = state.ownedUpgrades.length > 0 ? state.runStyleLabel() : '清场流';
+  return { primary, secondary: `${route} / Stage ${badgeTarget} 徽章 / ${tactical}` };
 }
 
 export function createRewardCardLayout(width: number, layout: Layout, index: number): RewardCardLayout {
@@ -379,9 +415,8 @@ export class HudRenderer {
     else if (state.dangerHintText) this.text(goalX, goalY, state.phase === 'reward' && compactLandscape ? compactRewardStatusText(state.dangerHintText) : state.dangerHintText, state.phase === 'reward' && compactLandscape ? 13 : 15, '#ffde59').setWordWrapWidth(goalW);
     else if (state.lowPressurePiecesRemaining > 0) this.text(goalX, goalY, `低压缓冲 ${state.lowPressurePiecesRemaining} 块`, 15, '#ffde59');
     else if (state.latestUpgradeGoal && state.phase !== 'reward') this.text(goalX, goalY, state.latestUpgradeGoal, 15, '#9befff').setWordWrapWidth(360);
-    if (state.phase === 'playing' && layout.portrait) {
-      const route = state.ownedUpgrades.length > 0 ? `你正在走：${state.runStyleLabel()}｜${state.recommendedNextRewardText()}` : state.openingGoalText();
-      this.text(14, 58, route, 13, '#9befff').setWordWrapWidth(this.scene.scale.width - 28);
+    if (layout.portrait && ui.skillWarning && ui.nowMs < ui.skillWarning.untilMs) {
+      this.skillPanel(14, 80, state.skillStatuses(), ui.nowMs, true, ui.skillWarning);
     }
     if (!layout.portrait) {
       const x = layout.boardX + layout.cell * 10 + 14;
@@ -482,10 +517,14 @@ export class HudRenderer {
     if (Number.isFinite(pieces)) parts.push(`落 ${pieces} 块`);
     if (layout.compactHud) {
       const x = layout.portrait ? 14 : layout.boardX + layout.cell * 10 + 14;
-      const y = layout.portrait ? 72 : 112;
-      this.text(x, y, remaining > 0 ? `目标：再消 ${remaining} 行` : '目标：选择强化继续推进', 15, color).setWordWrapWidth(layout.portrait ? Math.max(220, this.scene.scale.width - 28) : this.scene.scale.width - x - 10);
+      const y = layout.portrait ? 58 : 112;
+      const copy = layout.portrait ? createPortraitGoalCopy(state, nowMs) : undefined;
+      this.text(x, y, copy?.primary ?? (remaining > 0 ? `目标：再消 ${remaining} 行` : '目标：选择强化继续推进'), layout.portrait ? 13 : 15, color)
+        .setWordWrapWidth(layout.portrait ? Math.max(220, this.scene.scale.width - 28) : this.scene.scale.width - x - 10);
       const alternates = parts.slice(1);
-      if (alternates.length > 0) {
+      if (layout.portrait && copy) {
+        this.text(x, y + 18, copy.secondary, 12, '#75a7ba').setWordWrapWidth(Math.max(220, this.scene.scale.width - 28));
+      } else if (alternates.length > 0) {
         const alt = alternates[Math.floor(nowMs / 1100) % alternates.length];
         this.text(x, y + 20, `或 ${alt}`, 12, '#75a7ba').setWordWrapWidth(layout.portrait ? Math.max(220, this.scene.scale.width - 28) : this.scene.scale.width - x - 10);
       }
@@ -634,14 +673,12 @@ export class HudRenderer {
   }
 
   private skillWarningToast(x: number, rowY: number, width: number, compact: boolean, message: string): void {
-    const toastW = compact ? Math.min(178, Math.max(112, this.scene.scale.width - x - 14)) : 188;
-    const toastX = compact ? x + toastW / 2 : x + width / 2;
-    const toastY = rowY + (compact ? 31 : 36);
-    const bg = this.scene.add.rectangle(toastX, toastY, toastW, compact ? 24 : 28, 0x3a1020, 0.95).setStrokeStyle(2, 0xffde59, 0.95);
+    const layout = createSkillWarningToastLayout(x, rowY, width, this.scene.scale.width, compact);
+    const bg = this.scene.add.rectangle(layout.x, layout.y, layout.width, layout.height, 0x3a1020, 0.95).setStrokeStyle(2, 0xffde59, 0.95);
     this.cards.push(this.scene.add.container(0, 0, [bg]));
-    this.text(toastX, toastY - (compact ? 8 : 9), message, compact ? 11 : 12, '#ffde59')
+    this.text(layout.x, layout.y - (compact ? 8 : 9), message, compact ? 11 : 12, '#ffde59')
       .setOrigin(0.5, 0)
-      .setWordWrapWidth(toastW - 14);
+      .setWordWrapWidth(layout.textWidth);
   }
 
   private trialRewardStrip(x: number, y: number, width: number, message: string, nowMs: number): void {
@@ -649,7 +686,15 @@ export class HudRenderer {
     const h = 28;
     const bg = this.scene.add.rectangle(x + width / 2, y + 10, width, h, 0x103d2a, pulse).setStrokeStyle(2, 0x3dff9b, 0.9);
     this.cards.push(this.scene.add.container(0, 0, [bg]));
-    this.text(x + 10, y, message, 14, '#d9ffe8').setWordWrapWidth(width - 20);
+    this.text(x + 10, y, message, 14, '#d9ffe8').setWordWrapWidth(Math.max(120, width - 118));
+    const jump = Math.sin(nowMs / 70) > 0 ? -3 : 0;
+    const pillW = Math.min(96, Math.max(74, width * 0.24));
+    const pillX = x + width - pillW / 2 - 8;
+    const energyPill = this.scene.add.rectangle(pillX, y + 3 + jump, pillW, 18, 0xffde59, 0.92).setStrokeStyle(1, 0xffffff, 0.72);
+    const scorePill = this.scene.add.rectangle(pillX, y + 23 - jump, pillW, 18, 0x3dff9b, 0.9).setStrokeStyle(1, 0xffffff, 0.62);
+    this.cards.push(this.scene.add.container(0, 0, [energyPill, scorePill]));
+    this.text(pillX, y - 5 + jump, '+20 能量', 12, '#08101f').setOrigin(0.5, 0);
+    this.text(pillX, y + 15 - jump, '+120 分', 12, '#08101f').setOrigin(0.5, 0);
   }
 
   private energyBar(x: number, y: number, ratio: number, nowMs: number, refillUntilMs = 0): void {
