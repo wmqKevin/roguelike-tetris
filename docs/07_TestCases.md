@@ -1,12 +1,12 @@
 # 07_TestCases - MVP QA Test Cases
 
-Issue: ZI-135
-Build under test: v0.10 development patch on v0.9.0 base `1abfc9e4de5bffaae37d4a986c84788ba343213b`
+Issue: ZI-142
+Build under test: v0.11 development patch on v0.10.0 base `94e5d28fa0726824126e6cd3745abdbb718aa869`
 Date: 2026-07-09
 
 ## Scope
 
-MVP scope is the leader-approved cut: desktop keyboard first, first 6-8 stages, no full T-Spin, no touch controls, no permanent meta progression. v0.10 keeps the v0.9 skill trial and portrait reward work, then staggers C-skill release peaks, makes the trial completion reward strip persist for 2 seconds, moves low-energy failure feedback next to the C skill row, and queues fly-text events to avoid overlap.
+MVP scope is the leader-approved cut: desktop keyboard first, first 6-8 stages, no full T-Spin, no touch controls, no permanent meta progression. v0.11 keeps the v0.10 skill peak and trial reward work, then localizes low-energy failure beside the C skill row, compresses portrait top goals to two lines, adds stronger trial payout number jumps, and records the audio review status explicitly.
 
 ## Test Cases
 
@@ -63,9 +63,14 @@ MVP scope is the leader-approved cut: desktop keyboard first, first 6-8 stages, 
 | TC-049 | Trial reward strip persistence | P0 | Unit-test trial completion state and HUD strip copy | Completion grants +20 energy / +120 score / badge +1, replaces old target, and HUD renders the reward strip | PASS |
 | TC-050 | Low-energy C row warning | P1 | Unit-test compact HUD warning state | `能量不足 100` appears beside the skill row, with red/yellow row styling for the 250ms shake window | PASS |
 | TC-051 | Fly-text event queue | P1 | Unit-test feedback scheduler | Skill and trial peak feedback items are offset by 300-500ms queue spacing instead of same-frame rendering | PASS |
+| TC-052 | Portrait C row failure | P1 | Unit-test 390x844 HUD warning render | C row appears above the board during the warning; red/yellow toast is to the row's right and no long route copy returns | PASS |
+| TC-053 | Portrait top copy | P1 | Unit-test portrait goal copy helper | Top HUD produces one主目标 + one副目标 line without the old long `本局推荐流派` sentence | PASS |
+| TC-054 | Trial payout jump | P1 | Unit-test reward strip render | Reward strip still contains full copy and adds separate `+20 能量` / `+120 分` jumping pills | PASS |
+| TC-055 | Audio mix review | P2 | Try audible Chrome session for skill/reward/Game Over subjective mix | Non-headless Chrome cannot start without X server / `$DISPLAY`; reliable subjective listening not performed in this runtime | ENV LIMIT |
 
 ## Environment
 
 - Node/npm environment in Multica runtime
 - Dev server: Vite on `127.0.0.1:4173` or the next available port
-- Browser automation: Google Chrome headless screenshots are requested for 390x844, 520x390, and 960x720. Interactive reward playthrough remains covered by unit behavior tests plus visual smoke screenshots where browser tooling is available.
+- Browser automation: Google Chrome headless screenshots captured 390x844, 520x390, and 960x720. Interactive reward playthrough remains covered by unit behavior tests plus visual smoke screenshots where browser tooling is available.
+- Audio environment: `google-chrome` exists, but non-headless Chrome exits with `Missing X server or $DISPLAY`, so subjective SFX/BGM mix review must be covered by QA on an audible device.
