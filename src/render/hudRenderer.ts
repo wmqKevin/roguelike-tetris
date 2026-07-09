@@ -41,6 +41,14 @@ export type SkillWarningToastLayout = {
   textWidth: number;
 };
 
+export type TrialRewardStripLayout = {
+  x: number;
+  y: number;
+  width: number;
+  messageWidth: number;
+  pillX: number;
+};
+
 export type PortraitGoalCopy = {
   primary: string;
   secondary: string;
@@ -133,6 +141,23 @@ export function createSkillWarningToastLayout(x: number, rowY: number, rowWidth:
     return { x: x + rowWidth + 6 + width / 2, y: rowY + 10, width, height, textWidth: width - 14 };
   }
   return { x: compact ? x + width / 2 : x + rowWidth / 2, y: rowY + (compact ? -16 : 36), width, height, textWidth: width - 14 };
+}
+
+export function createTrialRewardStripLayout(layout: Layout, viewportWidth: number, viewportHeight: number, compactReward = false): TrialRewardStripLayout {
+  const boardW = layout.cell * 10;
+  if (layout.portrait) {
+    const width = Math.min(boardW - 18, viewportWidth - 36);
+    const x = Math.max(18, Math.min(viewportWidth - width - 18, layout.boardX + (boardW - width) / 2));
+    const boardLowerThirdY = layout.boardY + layout.cell * 13;
+    const maxY = viewportHeight - 56;
+    const y = Math.max(layout.boardY + layout.cell * 8, Math.min(boardLowerThirdY, maxY));
+    return { x, y, width, messageWidth: Math.max(118, width - 116), pillX: x + width - 50 };
+  }
+
+  const x = layout.compactHud && compactReward ? layout.boardX + boardW + 14 : layout.boardX;
+  const width = layout.compactHud && compactReward ? viewportWidth - x - 12 : boardW;
+  const y = layout.compactHud && compactReward ? 62 : layout.boardY + layout.cell * 20 + 68;
+  return { x, y, width, messageWidth: Math.max(120, width - 118), pillX: x + width - Math.min(96, Math.max(74, width * 0.24)) / 2 - 8 };
 }
 
 export function createPortraitGoalCopy(state: GameState, nowMs: number): PortraitGoalCopy {
@@ -257,29 +282,32 @@ export function createGameOverPanelLayout(width: number, height: number, copy: G
     const top = height / 2 - panelH / 2 + 20;
     const colW = Math.floor((panelW - 68) / 2);
     const right = left + colW + 20;
+    const maxTextBottom = height / 2 + panelH / 2 - 68;
+    const rowGap = height <= 430 ? 3 : 5;
     const lines: GameOverPanelLine[] = [];
     const pushColumn = (x: number, key: string, value: string, size: number, color: string, wrap = true): void => {
       const previous = [...lines].reverse().find((line) => line.x === x);
-      const y = previous ? previous.y + previous.height + 5 : top;
+      const y = previous ? previous.y + previous.height + rowGap : top;
       const itemTextWidth = wrap ? colW : undefined;
-      lines.push({ key, value, x, y, size, color, textWidth: itemTextWidth, height: estimateTextHeight(value, size, itemTextWidth) });
+      const available = Math.max(14, maxTextBottom - y);
+      lines.push({ key, value, x, y, size, color, textWidth: itemTextWidth, height: Math.min(estimateTextHeight(value, size, itemTextWidth), available) });
     };
 
     pushColumn(left, 'title', copy.title, width <= 520 ? 24 : 32, '#ffffff', false);
     pushColumn(left, 'score', `Score ${copy.score}`, width <= 520 ? 17 : 22, '#d7f7ff', false);
-    pushColumn(left, 'failure', `失败原因：${copy.failureReason}`, width <= 520 ? 13 : 16, '#ffde59');
-    pushColumn(left, 'advice', `下局建议：${copy.nextRunAdvice}`, width <= 520 ? 13 : 16, '#9befff');
-    pushColumn(left, 'buildAdvice', copy.nextRunBuildAdvice, width <= 520 ? 13 : 16, '#ffde59');
-    pushColumn(left, 'best', `本局最佳表现：${copy.bestPerformance}`, width <= 520 ? 12 : 16, '#d7f7ff');
-    pushColumn(right, 'style', `本局流派：${copy.runStyle}`, width <= 520 ? 13 : 16, '#d7f7ff');
-    pushColumn(right, 'goal', `下次目标：${copy.nextRunGoal}`, width <= 520 ? 13 : 16, '#ffde59');
-    pushColumn(right, 'progress', copy.progress, width <= 520 ? 13 : 16, '#ffde59');
+    pushColumn(left, 'failure', `失败原因：${copy.failureReason}`, width <= 520 ? 12 : 16, '#ffde59');
+    pushColumn(left, 'advice', `下局建议：${copy.nextRunAdvice}`, width <= 520 ? 12 : 16, '#9befff');
+    pushColumn(left, 'buildAdvice', copy.nextRunBuildAdvice, width <= 520 ? 12 : 16, '#ffde59');
+    pushColumn(left, 'best', `本局最佳表现：${copy.bestPerformance}`, width <= 520 ? 11 : 16, '#d7f7ff');
+    pushColumn(right, 'style', `本局流派：${copy.runStyle}`, width <= 520 ? 12 : 16, '#d7f7ff');
+    pushColumn(right, 'goal', `下次目标：${copy.nextRunGoal}`, width <= 520 ? 12 : 16, '#ffde59');
+    pushColumn(right, 'progress', copy.progress, width <= 520 ? 12 : 16, '#ffde59');
     pushColumn(right, 'upgrades', `本局强化：${copy.upgrades}`, width <= 520 ? 12 : 15, '#d7f7ff');
     pushColumn(right, 'codex', `本局新增图鉴 ${copy.codexCount}/12｜最高 Stage 徽章 ${copy.badge}`, width <= 520 ? 12 : 15, '#ffde59');
     pushColumn(right, 'bestStyle', `最佳流派 ${copy.style}`, width <= 520 ? 12 : 15, '#9befff');
 
     const panelBottom = height / 2 + panelH / 2;
-    const retryY = panelBottom - 42;
+    const retryY = panelBottom - 36;
     const retryX = width / 2 - 90;
     return { panelW, panelH, left, lines, retryX, retryY, shortcutX: retryX + 196, shortcutY: retryY - 10 };
   }
@@ -376,7 +404,7 @@ export class HudRenderer {
     this.skillTargetPreview(state, layout, ui.nowMs);
     if (state.lowPressurePiecesRemaining > 0) this.text(layout.boardX, layout.boardY + layout.cell * 20 + 42, `低压缓冲 ${state.lowPressurePiecesRemaining} 块`, 16, '#ffde59');
     if (state.dangerHintText) this.text(layout.boardX, layout.boardY + layout.cell * 20 + 68, state.dangerHintText, 16, '#ffde59').setWordWrapWidth(layout.cell * 10);
-    else if (ui.trialRewardStrip && ui.nowMs < ui.trialRewardStrip.untilMs) this.trialRewardStrip(layout.boardX, layout.boardY + layout.cell * 20 + 68, layout.cell * 10, ui.trialRewardStrip.message, ui.nowMs);
+    else if (ui.trialRewardStrip && ui.nowMs < ui.trialRewardStrip.untilMs) this.trialRewardStrip(createTrialRewardStripLayout(layout, this.scene.scale.width, this.scene.scale.height), ui.trialRewardStrip.message, ui.nowMs);
     else if (state.latestUpgradeGoal) this.text(layout.boardX, layout.boardY + layout.cell * 20 + 68, state.latestUpgradeGoal, 16, '#9befff');
     if (state.phase === 'playing') this.text(layout.boardX, layout.boardY - 74, state.openingGoalText(), 15, '#9befff').setWordWrapWidth(layout.cell * 10);
   }
@@ -410,7 +438,10 @@ export class HudRenderer {
     const goalY = layout.portrait ? this.scene.scale.height - 30 : state.phase === 'reward' ? 64 : 62;
     const goalX = compactLandscape && state.phase === 'reward' ? layout.boardX + layout.cell * 10 + 14 : 14;
     const goalW = compactLandscape && state.phase === 'reward' ? this.scene.scale.width - goalX - 12 : this.scene.scale.width - 28;
-    if (ui.trialRewardStrip && ui.nowMs < ui.trialRewardStrip.untilMs) this.trialRewardStrip(goalX, goalY, goalW, ui.trialRewardStrip.message, ui.nowMs);
+    if (ui.trialRewardStrip && ui.nowMs < ui.trialRewardStrip.untilMs) {
+      const strip = createTrialRewardStripLayout(layout, this.scene.scale.width, this.scene.scale.height, compactLandscape && state.phase === 'reward');
+      this.trialRewardStrip(strip, ui.trialRewardStrip.message, ui.nowMs);
+    }
     else if (state.firstRewardTrialRemaining > 0) this.text(goalX, goalY, `${state.firstRewardTrialText}（剩 ${state.firstRewardTrialRemaining} 块）`, 14, '#ffde59').setWordWrapWidth(goalW);
     else if (state.dangerHintText) this.text(goalX, goalY, state.phase === 'reward' && compactLandscape ? compactRewardStatusText(state.dangerHintText) : state.dangerHintText, state.phase === 'reward' && compactLandscape ? 13 : 15, '#ffde59').setWordWrapWidth(goalW);
     else if (state.lowPressurePiecesRemaining > 0) this.text(goalX, goalY, `低压缓冲 ${state.lowPressurePiecesRemaining} 块`, 15, '#ffde59');
@@ -681,15 +712,16 @@ export class HudRenderer {
       .setWordWrapWidth(layout.textWidth);
   }
 
-  private trialRewardStrip(x: number, y: number, width: number, message: string, nowMs: number): void {
+  private trialRewardStrip(layout: TrialRewardStripLayout, message: string, nowMs: number): void {
     const pulse = 0.74 + Math.sin(nowMs / 85) * 0.14;
     const h = 28;
+    const { x, y, width } = layout;
     const bg = this.scene.add.rectangle(x + width / 2, y + 10, width, h, 0x103d2a, pulse).setStrokeStyle(2, 0x3dff9b, 0.9);
     this.cards.push(this.scene.add.container(0, 0, [bg]));
-    this.text(x + 10, y, message, 14, '#d9ffe8').setWordWrapWidth(Math.max(120, width - 118));
+    this.text(x + 10, y, message, 14, '#d9ffe8').setWordWrapWidth(layout.messageWidth);
     const jump = Math.sin(nowMs / 70) > 0 ? -3 : 0;
     const pillW = Math.min(96, Math.max(74, width * 0.24));
-    const pillX = x + width - pillW / 2 - 8;
+    const pillX = layout.pillX;
     const energyPill = this.scene.add.rectangle(pillX, y + 3 + jump, pillW, 18, 0xffde59, 0.92).setStrokeStyle(1, 0xffffff, 0.72);
     const scorePill = this.scene.add.rectangle(pillX, y + 23 - jump, pillW, 18, 0x3dff9b, 0.9).setStrokeStyle(1, 0xffffff, 0.62);
     this.cards.push(this.scene.add.container(0, 0, [energyPill, scorePill]));
