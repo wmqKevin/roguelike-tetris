@@ -4,6 +4,53 @@ Release date: 2026-07-09
 Platform: Web
 Deployment URL: https://wmqkevin.github.io/roguelike-tetris/
 
+## v0.12.0 Release
+
+v0.12.0 finishes the experience-polish pass for the first trial reward, Game
+Over cleanup, and compact landscape settlement layout without changing the core
+Tetris rules.
+
+### Release Scope
+
+- P1: 390px portrait trial-completion reward strip is anchored lower around the
+  board's lower third, and its two payout pills stay inside the viewport for the
+  full 2-second confirmation window.
+- P1: Game Over and restart now clear transient feedback state, including
+  toasts, skill warnings, and trial reward strips, so stale combat/reward copy
+  does not leak into terminal or next-run views.
+- P1: 520px landscape settlement copy uses tighter type and spacing, with the
+  retry action clamped to avoid overlapping the two-column summary.
+- P2: Long-term goal card and first-30-second micro-reward messaging remain
+  covered by the existing route/progression copy from v0.11 and were not
+  regressed in this pass.
+
+### Verification
+
+- `npm install`: completed with 0 vulnerabilities.
+- `npm audit --audit-level=high`: completed with 0 vulnerabilities.
+- `npm test`: 5 files / 54 tests passed.
+- `npm run build`: passed and produced `assets/index-Dek-tm2w.js`
+  (1,257.19 kB, gzip 337.26 kB), `assets/index-DiInh9Gy.css` (0.39 kB,
+  gzip 0.28 kB), and `index.html` (0.40 kB, gzip 0.27 kB). Vite still reports
+  the expected Phaser bundle-size warning.
+
+### Known Risks
+
+- Subjective audio/BGM mix on real devices remains the final Stage 4 gate:
+  skill release, reward choice, and Game Over volume balance still need an
+  audible-device verdict before treating v0.12 as fully accepted.
+- This release verification includes headless/unit/build coverage, not a full
+  physical touch-device long-run playtest.
+
+### Rollback Plan
+
+- To roll back to v0.11.0, restore `gh-pages` deploy commit
+  `3a109dd9ab9b85e526cd12eeda934f417d2334b9` and `main`
+  `44d0adc50d8ce694668c08300caa1203552757d4`.
+- To roll back to v0.10.0, restore `gh-pages` deploy commit
+  `63666af3e37272e0188611c6511030d308baa5dd` and `main`
+  `94e5d28fa0726824126e6cd3745abdbb718aa869`.
+
 ## v0.11.0 Release
 
 v0.11.0 tightens the v0.10 feedback layer around failed C-skill input, portrait
